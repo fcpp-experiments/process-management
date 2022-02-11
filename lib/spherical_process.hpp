@@ -1,12 +1,12 @@
 // Copyright © 2022 Giorgio Audrito. All Rights Reserved.
 
 /**
- * @file message_dispatch.hpp
- * @brief Aggregate process dispatching point-to-point messages, avoiding to flood the network.
+ * @file spherical_process.hpp
+ * @brief Aggregate process TODO.
  */
 
-#ifndef FCPP_MESSAGE_DISPATCH_H_
-#define FCPP_MESSAGE_DISPATCH_H_
+#ifndef FCPP_SPHERICAL_PROCESS_H_
+#define FCPP_SPHERICAL_PROCESS_H_
 
 #include "lib/beautify.hpp"
 #include "lib/coordination.hpp"
@@ -82,6 +82,9 @@ constexpr size_t discrete_sqrt(size_t n) {
     return lo;
 }
 
+//! @brief Max distance of a broadcast
+constexpr double max_distance = 100;
+    
 //! @brief Number of devices.
 constexpr size_t devices = 300;
 
@@ -149,7 +152,12 @@ namespace tags {
     struct node_shape {};
 }
 
-
+template <typename node_t, typename G, typename S, typename... Ts, typename K = typename std::decay_t<S>::value_type, typename T = std::decay_t<std::result_of_t<G(K const&, Ts const&...)>>, typename R = std::decay_t<tuple_element_t<0,T>>, typename B = std::decay_t<tuple_element_t<1,T>>>
+std::enable_if_t<std::is_same<B,status>::value, std::unordered_map<K, R>>
+spawn2(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... xs) {
+    return spawn(node, call_point, process, key_set, xs...);
+}
+    
 using set_t = std::unordered_set<device_t>;
 using map_t = std::unordered_map<message, times_t>;
 
@@ -162,30 +170,28 @@ MAIN() {
     device_t src_id = 0;
     // distance estimation
     bool is_src = node.uid == src_id;
-    double ds = bis_distance(CALL, is_src, 1, 100);
+
     // basic node rendering
-    node.storage(center_dist{}) = ds;
-    node.storage(node_color{}) = color::hsva(ds*hue_scale, 1, 1);
-    node.storage(node_shape{}) = is_src ? shape::cube : shape::icosahedron;
-    node.storage(node_size{}) = is_src ? 16 : 10;
-    // spanning tree definition
-    device_t parent = get<1>(min_hood(CALL, make_tuple(nbr(CALL, ds), node.nbr_uid())));
-    // routing sets along the tree
-    set_t below = sp_collection(CALL, ds, set_t{node.uid}, set_t{}, [](set_t x, set_t const& y){
-        x.insert(y.begin(), y.end());
-        return x;
-    });
+    //node.storage(center_dist{}) = ds;
+    //node.storage(node_color{}) = color::hsva(ds*hue_scale, 1, 1);
+    //    node.storage(node_shape{}) = is_src ? shape::cube : shape::icosahedron;
+    //    node.storage(node_size{}) = is_src ? 16 : 10;
+
     // random message with 1% probability during time [10..50]
     common::option<message> m;
     if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
         node.storage(sent_count{}) += 1;
     }
+    
     // dispatches messages
     std::vector<color> procs{color(BLACK)};
-    map_t r = spawn(CALL, [&](message const& m){
-        procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
-        bool inpath = below.count(m.from) + below.count(m.to) > 0;
+    map_t r = spawn2(CALL, [&](message const& m){
+	bool is_src = node.uid == m.from;		      
+			      
+        //procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
+	double ds = bis_distance(CALL, is_src, 1, 100);
+	bool inpath = ds < max_distance;
         status s = node.uid == m.to ? status::terminated_output :
                    inpath ? status::internal : status::external;
         return make_tuple(node.current_time(), s);
