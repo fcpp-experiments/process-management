@@ -191,13 +191,12 @@ MAIN() {
     
     // dispatches messages
     std::vector<color> procs{color(BLACK)};
-    map_t r = spawn(CALL, [&](message const& m){
+    map_t r = spawn2(CALL, [&](message const& m){
 	bool is_src = node.uid == m.from;
 		
         procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
 
-	//double ds = bis_distance(CALL, is_src, 1, 100);
-	double ds = 0;
+	double ds = bis_distance(CALL, is_src, 1, 100);
 
 	bool inpath = ds < max_distance;
         status s = node.uid == m.to ? status::terminated_output :
