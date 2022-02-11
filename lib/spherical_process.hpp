@@ -82,9 +82,6 @@ constexpr size_t discrete_sqrt(size_t n) {
     return lo;
 }
 
-//! @brief Max distance of a broadcast
-constexpr double max_distance = 100;
-    
 //! @brief Number of devices.
 constexpr size_t devices = 300;
 
@@ -94,6 +91,9 @@ constexpr size_t comm = 100;
 //! @brief Side of the deployment area.
 constexpr size_t side = discrete_sqrt(devices * 3000);
 
+//! @brief Max distance of a broadcast
+constexpr double max_distance = side / 2.0;
+    
 //! @brief Height of the deployment area.
 constexpr size_t height = 100;
 
@@ -155,7 +155,10 @@ namespace tags {
 template <typename node_t, typename G, typename S, typename... Ts, typename K = typename std::decay_t<S>::value_type, typename T = std::decay_t<std::result_of_t<G(K const&, Ts const&...)>>, typename R = std::decay_t<tuple_element_t<0,T>>, typename B = std::decay_t<tuple_element_t<1,T>>>
 std::enable_if_t<std::is_same<B,status>::value, std::unordered_map<K, R>>
 spawn2(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... xs) {
-    return spawn(node, call_point, process, key_set, xs...);
+    return spawn(CALL, [&](K const& key, Ts const&... xs) {
+			   auto r = process(key, xs...);
+			   return r;
+			       } , key_set, xs...);
 }
     
 using set_t = std::unordered_set<device_t>;
@@ -169,14 +172,16 @@ MAIN() {
     rectangle_walk(CALL, make_vec(0,0,0), make_vec(side,side,height), node.storage(speed{}), 1);
     device_t src_id = 0;
     // distance estimation
-    bool is_src = node.uid == src_id;
+    bool is_src;
 
     // basic node rendering
     //node.storage(center_dist{}) = ds;
     //node.storage(node_color{}) = color::hsva(ds*hue_scale, 1, 1);
     //    node.storage(node_shape{}) = is_src ? shape::cube : shape::icosahedron;
-    //    node.storage(node_size{}) = is_src ? 16 : 10;
 
+    //node.storage(node_size{}) = is_src ? 16 : 10;
+    node.storage(node_size{}) = 10;
+	
     // random message with 1% probability during time [10..50]
     common::option<message> m;
     if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
@@ -186,11 +191,14 @@ MAIN() {
     
     // dispatches messages
     std::vector<color> procs{color(BLACK)};
-    map_t r = spawn2(CALL, [&](message const& m){
-	bool is_src = node.uid == m.from;		      
-			      
-        //procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
-	double ds = bis_distance(CALL, is_src, 1, 100);
+    map_t r = spawn(CALL, [&](message const& m){
+	bool is_src = node.uid == m.from;
+		
+        procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
+
+	//double ds = bis_distance(CALL, is_src, 1, 100);
+	double ds = 0;
+
 	bool inpath = ds < max_distance;
         status s = node.uid == m.to ? status::terminated_output :
                    inpath ? status::internal : status::external;
