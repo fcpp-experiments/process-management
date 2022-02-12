@@ -107,21 +107,27 @@ namespace tags {
     struct speed {};
 
     //! @brief The maximum number of processes ever run by the node.
+    template <typename T>
     struct max_proc {};
 
     //! @brief The total number of processes ever run by the node.
+    template <typename T>    
     struct tot_proc {};
 
     //! @brief Total time of first delivery.
+    template <typename T>    
     struct first_delivery {};
 
     //! @brief Total number of sent messages.
+    template <typename T>    
     struct sent_count {};
 
     //! @brief Total number of first deliveries.
+    template <typename T>    
     struct delivery_count {};
 
     //! @brief Total number of repeated deliveries.
+    template <typename T>    
     struct repeat_count {};
 
     //! @brief Color of the current node.

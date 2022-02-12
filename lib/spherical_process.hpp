@@ -33,6 +33,9 @@ namespace coordination {
 
 
 namespace tags {
+    //! @brief The spherical process
+    struct spherical {};
+    
     //! @brief The maximum message size ever exchanged by the node.
     struct max_msg {};
 
@@ -74,7 +77,7 @@ MAIN() {
 	// fixed destination
 	m.emplace(node.uid, 82, node.current_time());
 
-        node.storage(sent_count{}) += 1;	
+        node.storage(sent_count<spherical>{}) += 1;	
     }
     
     // dispatches messages
@@ -104,10 +107,10 @@ MAIN() {
     node.storage(node_color{}) = color::hsva(procs_dist[dsidx]*hue_scale, 1, 1);
     
     // process and msg stats
-    node.storage(max_proc{}) = max(node.storage(max_proc{}), procs.size() - 1);
-    node.storage(tot_proc{}) += procs.size() - 1;
-    node.storage(max_msg{}) = max(node.storage(max_msg{}), node.msg_size());
-    node.storage(tot_msg{}) += node.msg_size();
+    node.storage(max_proc<spherical>{}) = max(node.storage(max_proc<spherical>{}), procs.size() - 1);
+    node.storage(tot_proc<spherical>{}) += procs.size() - 1;
+    //    node.storage(max_msg<spherical>{}) = max(node.storage(max_msg{}), node.msg_size());
+    //    node.storage(tot_msg<spherical>{}) += node.msg_size();
     if (procs.size() > 1) node.storage(node_size{}) *= 1.5;
 
     // additional node rendering
@@ -117,10 +120,10 @@ MAIN() {
     // persist received messages and delivery stats
     r = old(CALL, map_t{}, [&](map_t m){
         for (auto const& x : r) {
-            if (m.count(x.first)) node.storage(repeat_count{}) += 1;
+            if (m.count(x.first)) node.storage(repeat_count<spherical>{}) += 1;
             else {
-                node.storage(first_delivery{}) += x.second - x.first.time;
-                node.storage(delivery_count{}) += 1;
+                node.storage(first_delivery<spherical>{}) += x.second - x.first.time;
+                node.storage(delivery_count<spherical>{}) += 1;
                 m[x.first] = x.second;
             }
         }
