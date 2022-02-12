@@ -13,56 +13,7 @@
 #include "lib/data.hpp"
 
 
-//! @brief Struct representing a message.
-struct message {
-    //! @brief Sender UID.
-    fcpp::device_t from;
-    //! @brief Receiver UID.
-    fcpp::device_t to;
-    //! @brief Creation timestamp.
-    fcpp::times_t time;
-
-    //! @brief Empty constructor.
-    message() = default;
-
-    //! @brief Member constructor.
-    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time) : from(from), to(to), time(time) {}
-
-    //! @brief Equality operator.
-    bool operator==(message const& m) const {
-        return from == m.from and to == m.to and time == m.time;
-    }
-
-    //! @brief Hash computation.
-    size_t hash() const {
-        constexpr size_t offs = sizeof(size_t)*CHAR_BIT/3;
-        return (size_t(time) << (2*offs)) | (size_t(from) << (offs)) | size_t(to);
-    }
-
-    //! @brief Serialises the content from/to a given input/output stream.
-    template <typename S>
-    S& serialize(S& s) {
-        return s & from & to & time;
-    }
-
-    //! @brief Serialises the content from/to a given input/output stream (const overload).
-    template <typename S>
-    S& serialize(S& s) const {
-        return s << from << to << time;
-    }
-};
-
-
-namespace std {
-    //! @brief Hasher object for the message struct.
-    template <>
-    struct hash<message> {
-        //! @brief Produces an hash for a message, combining to and from into a size_t.
-        size_t operator()(message const& m) const {
-            return m.hash();
-        }
-    };
-}
+#include "process_common.hpp"
 
 
 /**
@@ -71,34 +22,10 @@ namespace std {
 namespace fcpp {
 
 
-//! @brief Minimum number whose square is at least n.
-constexpr size_t discrete_sqrt(size_t n) {
-    size_t lo = 0, hi = n, mid = 0;
-    while (lo < hi) {
-        mid = (lo + hi)/2;
-        if (mid*mid < n) lo = mid+1;
-        else hi = mid;
-    }
-    return lo;
-}
-
-//! @brief Number of devices.
-constexpr size_t devices = 300;
-
-//! @brief Communication radius.
-constexpr size_t comm = 100;
-
-//! @brief Side of the deployment area.
-constexpr size_t side = discrete_sqrt(devices * 3000);
-
 //! @brief Max distance of a broadcast
-constexpr double max_distance = side / 2.0;
-    
-//! @brief Height of the deployment area.
-constexpr size_t height = 100;
-
-//! @brief Color hue scale.
-constexpr float hue_scale = 360.0f/(side+height);
+// TODO will be something like this:
+//constexpr double max_distance = side / 2.0;
+constexpr double max_distance = INF;
 
 
 //! @brief Namespace containing the libraries of coordination routines.
@@ -106,59 +33,14 @@ namespace coordination {
 
 
 namespace tags {
-    //! @brief The movement speed of devices.
-    struct speed {};
-
     //! @brief The maximum message size ever exchanged by the node.
     struct max_msg {};
 
     //! @brief The total message size ever exchanged by the node.
     struct tot_msg {};
 
-    //! @brief The maximum number of processes ever run by the node.
-    struct max_proc {};
-
-    //! @brief The total number of processes ever run by the node.
-    struct tot_proc {};
-
-    //! @brief Total time of first delivery.
-    struct first_delivery {};
-
-    //! @brief Total number of sent messages.
-    struct sent_count {};
-
-    //! @brief Total number of first deliveries.
-    struct delivery_count {};
-
-    //! @brief Total number of repeated deliveries.
-    struct repeat_count {};
-
     //! @brief Distance to the central node.
     struct center_dist {};
-
-    //! @brief Color of the current node.
-    struct node_color {};
-
-    //! @brief Left color of the current node.
-    struct left_color {};
-
-    //! @brief Right color of the current node.
-    struct right_color {};
-
-    //! @brief Size of the current node.
-    struct node_size {};
-
-    //! @brief Shape of the current node.
-    struct node_shape {};
-}
-
-template <typename node_t, typename G, typename S, typename... Ts, typename K = typename std::decay_t<S>::value_type, typename T = std::decay_t<std::result_of_t<G(K const&, Ts const&...)>>, typename R = std::decay_t<tuple_element_t<0,T>>, typename B = std::decay_t<tuple_element_t<1,T>>>
-std::enable_if_t<std::is_same<B,status>::value, std::unordered_map<K, R>>
-spawn2(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... xs) {
-    return spawn(CALL, [&](K const& key, Ts const&... xs) {
-			   auto r = process(key, xs...);
-			   return r;
-			       } , key_set, xs...);
 }
     
 using set_t = std::unordered_set<device_t>;
@@ -171,47 +53,67 @@ MAIN() {
     // random walk
     rectangle_walk(CALL, make_vec(0,0,0), make_vec(side,side,height), node.storage(speed{}), 1);
     device_t src_id = 0;
-    // distance estimation
-    bool is_src;
+    bool is_src = node.uid == src_id;
 
     // basic node rendering
-    //node.storage(center_dist{}) = ds;
-    //node.storage(node_color{}) = color::hsva(ds*hue_scale, 1, 1);
-    //    node.storage(node_shape{}) = is_src ? shape::cube : shape::icosahedron;
-
-    //node.storage(node_size{}) = is_src ? 16 : 10;
-    node.storage(node_size{}) = 10;
+    node.storage(node_shape{}) = is_src ? shape::cube : shape::icosahedron;
+    node.storage(node_size{}) = is_src ? 16 : 10;
 	
     // random message with 1% probability during time [10..50]
     common::option<message> m;
+    // TODO will be something like this:
+    /*
     if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
         node.storage(sent_count{}) += 1;
     }
+    */
+    if (is_src && node.current_time() > 3 && node.current_time() < 4) {
+	// TODO should be
+	//        m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
+	// fixed destination
+	m.emplace(node.uid, 82, node.current_time());
+
+        node.storage(sent_count{}) += 1;	
+    }
     
     // dispatches messages
     std::vector<color> procs{color(BLACK)};
-    map_t r = spawn2(CALL, [&](message const& m){
-	bool is_src = node.uid == m.from;
+    std::vector<double> procs_dist{0};
+    map_t r = spawn_legacy(CALL, [&](message const& m){
+	//	bool is_src = node.uid == m.from;
 		
         procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
 
 	double ds = bis_distance(CALL, is_src, 1, 100);
-
+	procs_dist.push_back(ds);
+	
 	bool inpath = ds < max_distance;
-        status s = node.uid == m.to ? status::terminated_output :
-                   inpath ? status::internal : status::external;
-        return make_tuple(node.current_time(), s);
+
+	// TODO should be something like
+	status s = node.uid == m.to ? status::terminated_output :
+	    inpath ? status::internal : status::external;
+	/* no termination
+	status s = inpath ? status::internal : status::external;
+	*/
+        return make_tuple(node.current_time(), s);	
     }, m);
+
+    size_t dsidx = max(int(procs_dist.size()) - 1, 0);
+    node.storage(center_dist{}) = procs_dist[dsidx];
+    node.storage(node_color{}) = color::hsva(procs_dist[dsidx]*hue_scale, 1, 1);
+    
     // process and msg stats
     node.storage(max_proc{}) = max(node.storage(max_proc{}), procs.size() - 1);
     node.storage(tot_proc{}) += procs.size() - 1;
     node.storage(max_msg{}) = max(node.storage(max_msg{}), node.msg_size());
     node.storage(tot_msg{}) += node.msg_size();
     if (procs.size() > 1) node.storage(node_size{}) *= 1.5;
+
     // additional node rendering
     node.storage(left_color{})  = procs[min(int(procs.size()), 2)-1];
     node.storage(right_color{}) = procs[min(int(procs.size()), 3)-1];
+
     // persist received messages and delivery stats
     r = old(CALL, map_t{}, [&](map_t m){
         for (auto const& x : r) {
@@ -234,4 +136,4 @@ FUN_EXPORT main_t = export_list<rectangle_walk_t<3>, bis_distance_t, sp_collecti
 
 }
 
-#endif // FCPP_MESSAGE_DISPATCH_H_
+#endif // FCPP_SPHERICAL_PROCESS_H_

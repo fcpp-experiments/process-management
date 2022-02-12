@@ -81,7 +81,9 @@ DECLARE_OPTIONS(opt,
     >,
     init<
         x,                  rectangle_d,
-        speed,              distribution::constant_n<double, 1>
+	speed,              distribution::constant_n<double, 5>
+		// original speed
+		//		speed,              distribution::constant_n<double, 1>
     >,
     plot_type<plot_t>,
     dimension<dim>,
