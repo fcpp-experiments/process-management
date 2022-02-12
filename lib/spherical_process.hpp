@@ -23,7 +23,7 @@ namespace fcpp {
 
 
 //! @brief Max distance of a broadcast
-// TODO will be something like this:
+// TODO should be something like this:
 //constexpr double max_distance = side / 2.0;
 constexpr double max_distance = INF;
 
@@ -36,12 +36,6 @@ namespace tags {
     //! @brief The spherical process
     struct spherical {};
     
-    //! @brief The maximum message size ever exchanged by the node.
-    struct max_msg {};
-
-    //! @brief The total message size ever exchanged by the node.
-    struct tot_msg {};
-
     //! @brief Distance to the central node.
     struct center_dist {};
 }
@@ -53,6 +47,7 @@ using map_t = std::unordered_map<message, times_t>;
 MAIN() {
     // import tags for convenience
     using namespace tags;
+
     // random walk
     rectangle_walk(CALL, make_vec(0,0,0), make_vec(side,side,height), node.storage(speed{}), 1);
     device_t src_id = 0;
@@ -64,7 +59,7 @@ MAIN() {
 	
     // random message with 1% probability during time [10..50]
     common::option<message> m;
-    // TODO will be something like this:
+    // TODO should be something like this:
     /*
     if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
@@ -73,8 +68,7 @@ MAIN() {
     */
     if (is_src && node.current_time() > 3 && node.current_time() < 4) {
 	// TODO should be
-	//        m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
-	// fixed destination
+	//  m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
 	m.emplace(node.uid, 82, node.current_time());
 
         node.storage(sent_count<spherical>{}) += 1;	
@@ -84,6 +78,7 @@ MAIN() {
     std::vector<color> procs{color(BLACK)};
     std::vector<double> procs_dist{0};
     map_t r = spawn_legacy(CALL, [&](message const& m){
+	// TODO source of the process?
 	//	bool is_src = node.uid == m.from;
 		
         procs.push_back(color::hsva(m.to*360.0/devices, 1, 1));
@@ -109,8 +104,6 @@ MAIN() {
     // process and msg stats
     node.storage(max_proc<spherical>{}) = max(node.storage(max_proc<spherical>{}), procs.size() - 1);
     node.storage(tot_proc<spherical>{}) += procs.size() - 1;
-    //    node.storage(max_msg<spherical>{}) = max(node.storage(max_msg{}), node.msg_size());
-    //    node.storage(tot_msg<spherical>{}) += node.msg_size();
     if (procs.size() > 1) node.storage(node_size{}) *= 1.5;
 
     // additional node rendering

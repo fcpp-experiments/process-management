@@ -13,9 +13,6 @@ constexpr size_t end = 1000;
 //! @brief Average time of first delivery.
 struct avg_first_delivery {};
 
-//! @brief Total size of messages exchanged per unit of time.
-//struct avg_msg_exchanged {};
-
 //! @brief Total active processes per unit of time.
 struct avg_active_proc {};
 
@@ -28,8 +25,6 @@ using round_s = sequence::periodic<
 using rectangle_d = distribution::rect_n<1, 0, 0, 0, side, side, height>;
 
 using aggregator_t = aggregators<
-    //    max_msg,        aggregator::max<size_t>,
-    //    tot_msg,        aggregator::sum<size_t>,
     max_proc<spherical>,       aggregator::max<size_t>,
     tot_proc<spherical>,       aggregator::sum<size_t>,
     first_delivery<spherical>, aggregator::sum<double>,
@@ -42,9 +37,7 @@ template <typename... Ts>
 using lines_t = plot::join<plot::values<aggregator_t, common::type_sequence<>, Ts>...>;
 template <typename... Ts>
 using rows_t = plot::join<plot::value<Ts>...>;
-//using maxs_t = plot::filter<plot::time, filter::below<100>, plot::split<plot::time, lines_t<max_msg, max_proc>>>;
 using maxs_t = plot::filter<plot::time, filter::below<100>, plot::split<plot::time, lines_t<max_proc<spherical>>>>;
-//using tots_t = plot::split<plot::time, rows_t<avg_msg_exchanged, avg_active_proc>>;
 using tots_t = plot::split<plot::time, rows_t<avg_active_proc>>;
 using counts_t = plot::split<plot::time, lines_t<sent_count<spherical>, delivery_count<spherical>, repeat_count<spherical>>>;
 using delay_t = plot::split<plot::time, rows_t<avg_first_delivery>>;
@@ -60,32 +53,27 @@ DECLARE_OPTIONS(opt,
     spawn_schedule<sequence::multiple_n<devices, 0>>,
     tuple_store<
         speed,                         double,
-		//        max_msg,            size_t,
-		//        tot_msg,            size_t,
         max_proc<spherical>,           size_t,
         tot_proc<spherical>,           size_t,
         first_delivery<spherical>,     times_t,
         sent_count<spherical>,         size_t,
         delivery_count<spherical>,     size_t,
         repeat_count<spherical>,       size_t,
-        center_dist,        double,
-        node_color,         color,
-        left_color,         color,
-        right_color,        color,
-        node_size,          double,
-        node_shape,         shape
+        center_dist,                   double,
+        node_color,                    color,
+        left_color,                    color,
+        right_color,                   color,
+        node_size,                     double,
+        node_shape,                    shape
     >,
     aggregator_t,
     log_functors<
         avg_first_delivery, functor::div<aggregator::sum<first_delivery<spherical>, true>, aggregator::sum<delivery_count<spherical>, false>>,
-		//        avg_msg_exchanged,  functor::div<functor::diff<aggregator::sum<tot_msg<spherical>, false>>, distribution::constant_n<double, devices>>,
         avg_active_proc,    functor::div<functor::diff<aggregator::sum<tot_proc<spherical>, false>>, distribution::constant_n<double, devices>>
     >,
     init<
         x,                  rectangle_d,
-	speed,              distribution::constant_n<double, 5>
-		// original speed
-		//		speed,              distribution::constant_n<double, 1>
+	speed,              distribution::constant_n<double, 5> // original value 1
     >,
     plot_type<plot_t>,
     dimension<dim>,

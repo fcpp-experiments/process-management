@@ -28,23 +28,21 @@ using round_s = sequence::periodic<
 using rectangle_d = distribution::rect_n<1, 0, 0, 0, side, side, height>;
 
 using aggregator_t = aggregators<
-    max_msg,        aggregator::max<size_t>,
-    tot_msg,        aggregator::sum<size_t>,
-    max_proc,       aggregator::max<size_t>,
-    tot_proc,       aggregator::sum<size_t>,
-    first_delivery, aggregator::sum<double>,
-    sent_count,     aggregator::sum<size_t>,
-    delivery_count, aggregator::sum<size_t>,
-    repeat_count,   aggregator::sum<size_t>
+    max_proc<tree>,       aggregator::max<size_t>,
+    tot_proc<tree>,       aggregator::sum<size_t>,
+    first_delivery<tree>, aggregator::sum<double>,
+    sent_count<tree>,     aggregator::sum<size_t>,
+    delivery_count<tree>, aggregator::sum<size_t>,
+    repeat_count<tree>,   aggregator::sum<size_t>
 >;
 
 template <typename... Ts>
 using lines_t = plot::join<plot::values<aggregator_t, common::type_sequence<>, Ts>...>;
 template <typename... Ts>
 using rows_t = plot::join<plot::value<Ts>...>;
-using maxs_t = plot::filter<plot::time, filter::below<100>, plot::split<plot::time, lines_t<max_msg, max_proc>>>;
-using tots_t = plot::split<plot::time, rows_t<avg_msg_exchanged, avg_active_proc>>;
-using counts_t = plot::split<plot::time, lines_t<sent_count, delivery_count, repeat_count>>;
+using maxs_t = plot::filter<plot::time, filter::below<100>, plot::split<plot::time, lines_t<max_proc<tree>>>>;
+using tots_t = plot::split<plot::time, rows_t<avg_active_proc>>;
+using counts_t = plot::split<plot::time, lines_t<sent_count<tree>, delivery_count<tree>, repeat_count<tree>>>;
 using delay_t = plot::split<plot::time, rows_t<avg_first_delivery>>;
 using plot_t = plot::join<maxs_t, tots_t, counts_t, delay_t>;
 
@@ -58,14 +56,12 @@ DECLARE_OPTIONS(opt,
     spawn_schedule<sequence::multiple_n<devices, 0>>,
     tuple_store<
         speed,              double,
-        max_msg,            size_t,
-        tot_msg,            size_t,
-        max_proc,           size_t,
-        tot_proc,           size_t,
-        first_delivery,     times_t,
-        sent_count,         size_t,
-        delivery_count,     size_t,
-        repeat_count,       size_t,
+        max_proc<tree>,           size_t,
+        tot_proc<tree>,           size_t,
+        first_delivery<tree>,     times_t,
+        sent_count<tree>,         size_t,
+        delivery_count<tree>,     size_t,
+        repeat_count<tree>,       size_t,
         center_dist,        double,
         node_color,         color,
         left_color,         color,
@@ -75,9 +71,8 @@ DECLARE_OPTIONS(opt,
     >,
     aggregator_t,
     log_functors<
-        avg_first_delivery, functor::div<aggregator::sum<first_delivery, true>, aggregator::sum<delivery_count, false>>,
-        avg_msg_exchanged,  functor::div<functor::diff<aggregator::sum<tot_msg, false>>, distribution::constant_n<double, devices>>,
-        avg_active_proc,    functor::div<functor::diff<aggregator::sum<tot_proc, false>>, distribution::constant_n<double, devices>>
+        avg_first_delivery, functor::div<aggregator::sum<first_delivery<tree>, true>, aggregator::sum<delivery_count<tree>, false>>,
+        avg_active_proc,    functor::div<functor::diff<aggregator::sum<tot_proc<tree>, false>>, distribution::constant_n<double, devices>>
     >,
     init<
         x,                  rectangle_d,

@@ -12,143 +12,24 @@
 #include "lib/coordination.hpp"
 #include "lib/data.hpp"
 
-
-//! @brief Struct representing a message.
-struct message {
-    //! @brief Sender UID.
-    fcpp::device_t from;
-    //! @brief Receiver UID.
-    fcpp::device_t to;
-    //! @brief Creation timestamp.
-    fcpp::times_t time;
-
-    //! @brief Empty constructor.
-    message() = default;
-
-    //! @brief Member constructor.
-    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time) : from(from), to(to), time(time) {}
-
-    //! @brief Equality operator.
-    bool operator==(message const& m) const {
-        return from == m.from and to == m.to and time == m.time;
-    }
-
-    //! @brief Hash computation.
-    size_t hash() const {
-        constexpr size_t offs = sizeof(size_t)*CHAR_BIT/3;
-        return (size_t(time) << (2*offs)) | (size_t(from) << (offs)) | size_t(to);
-    }
-
-    //! @brief Serialises the content from/to a given input/output stream.
-    template <typename S>
-    S& serialize(S& s) {
-        return s & from & to & time;
-    }
-
-    //! @brief Serialises the content from/to a given input/output stream (const overload).
-    template <typename S>
-    S& serialize(S& s) const {
-        return s << from << to << time;
-    }
-};
-
-
-namespace std {
-    //! @brief Hasher object for the message struct.
-    template <>
-    struct hash<message> {
-        //! @brief Produces an hash for a message, combining to and from into a size_t.
-        size_t operator()(message const& m) const {
-            return m.hash();
-        }
-    };
-}
-
+#include "process_common.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
 namespace fcpp {
 
-
-//! @brief Minimum number whose square is at least n.
-constexpr size_t discrete_sqrt(size_t n) {
-    size_t lo = 0, hi = n, mid = 0;
-    while (lo < hi) {
-        mid = (lo + hi)/2;
-        if (mid*mid < n) lo = mid+1;
-        else hi = mid;
-    }
-    return lo;
-}
-
-//! @brief Number of devices.
-constexpr size_t devices = 300;
-
-//! @brief Communication radius.
-constexpr size_t comm = 100;
-
-//! @brief Side of the deployment area.
-constexpr size_t side = discrete_sqrt(devices * 3000);
-
-//! @brief Height of the deployment area.
-constexpr size_t height = 100;
-
-//! @brief Color hue scale.
-constexpr float hue_scale = 360.0f/(side+height);
-
-
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
 
 namespace tags {
-    //! @brief The movement speed of devices.
-    struct speed {};
-
-    //! @brief The maximum message size ever exchanged by the node.
-    struct max_msg {};
-
-    //! @brief The total message size ever exchanged by the node.
-    struct tot_msg {};
-
-    //! @brief The maximum number of processes ever run by the node.
-    struct max_proc {};
-
-    //! @brief The total number of processes ever run by the node.
-    struct tot_proc {};
-
-    //! @brief Total time of first delivery.
-    struct first_delivery {};
-
-    //! @brief Total number of sent messages.
-    struct sent_count {};
-
-    //! @brief Total number of first deliveries.
-    struct delivery_count {};
-
-    //! @brief Total number of repeated deliveries.
-    struct repeat_count {};
-
+    //! @brief Tree process.
+    struct tree {};
+    
     //! @brief Distance to the central node.
     struct center_dist {};
-
-    //! @brief Color of the current node.
-    struct node_color {};
-
-    //! @brief Left color of the current node.
-    struct left_color {};
-
-    //! @brief Right color of the current node.
-    struct right_color {};
-
-    //! @brief Size of the current node.
-    struct node_size {};
-
-    //! @brief Shape of the current node.
-    struct node_shape {};
 }
-
 
 using set_t = std::unordered_set<device_t>;
 using map_t = std::unordered_map<message, times_t>;
@@ -179,7 +60,7 @@ MAIN() {
     common::option<message> m;
     if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time());
-        node.storage(sent_count{}) += 1;
+        node.storage(sent_count<tree>{}) += 1;
     }
     // dispatches messages
     std::vector<color> procs{color(BLACK)};
@@ -191,10 +72,8 @@ MAIN() {
         return make_tuple(node.current_time(), s);
     }, m);
     // process and msg stats
-    node.storage(max_proc{}) = max(node.storage(max_proc{}), procs.size() - 1);
-    node.storage(tot_proc{}) += procs.size() - 1;
-    node.storage(max_msg{}) = max(node.storage(max_msg{}), node.msg_size());
-    node.storage(tot_msg{}) += node.msg_size();
+    node.storage(max_proc<tree>{}) = max(node.storage(max_proc<tree>{}), procs.size() - 1);
+    node.storage(tot_proc<tree>{}) += procs.size() - 1;
     if (procs.size() > 1) node.storage(node_size{}) *= 1.5;
     // additional node rendering
     node.storage(left_color{})  = procs[min(int(procs.size()), 2)-1];
@@ -202,10 +81,10 @@ MAIN() {
     // persist received messages and delivery stats
     r = old(CALL, map_t{}, [&](map_t m){
         for (auto const& x : r) {
-            if (m.count(x.first)) node.storage(repeat_count{}) += 1;
+            if (m.count(x.first)) node.storage(repeat_count<tree>{}) += 1;
             else {
-                node.storage(first_delivery{}) += x.second - x.first.time;
-                node.storage(delivery_count{}) += 1;
+                node.storage(first_delivery<tree>{}) += x.second - x.first.time;
+                node.storage(delivery_count<tree>{}) += 1;
                 m[x.first] = x.second;
             }
         }
