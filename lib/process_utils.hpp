@@ -1,12 +1,12 @@
 // Copyright © 2022 Giorgio Audrito. All Rights Reserved.
 
 /**
- * @file process_common.hpp
- * @brief Aggregate process TODO.
+ * @file process_utils.hpp
+ * @brief General utility functions for aggregate processes.
  */
 
-#ifndef FCPP_PROCESS_COMMON_H_
-#define FCPP_PROCESS_COMMON_H_
+#ifndef FCPP_PROCESS_UTILS_H_
+#define FCPP_PROCESS_UTILS_H_
 
 #include "lib/beautify.hpp"
 #include "lib/coordination.hpp"
@@ -159,4 +159,4 @@ spawn_legacy(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts cons
 
 } // fcpp
 
-#endif // FCPP_PROCESS_COMMON_H_
+#endif // FCPP_PROCESS_UTILS_H_

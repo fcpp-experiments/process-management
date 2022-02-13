@@ -12,7 +12,7 @@
 #include "lib/coordination.hpp"
 #include "lib/data.hpp"
 
-#include "process_common.hpp"
+#include "process_utils.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
