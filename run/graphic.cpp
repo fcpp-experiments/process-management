@@ -7,6 +7,27 @@ using namespace fcpp;
 using namespace component::tags;
 using namespace coordination::tags;
 
+
+//! @brief Minimum number whose square is at least n.
+constexpr size_t discrete_sqrt(size_t n) {
+    size_t lo = 0, hi = n, mid = 0;
+    while (lo < hi) {
+        mid = (lo + hi)/2;
+        if (mid*mid < n) lo = mid+1;
+        else hi = mid;
+    }
+    return lo;
+}
+
+//! @brief Number of devices.
+constexpr size_t devnum = 300;
+
+//! @brief Communication radius.
+constexpr size_t comm = 100;
+
+//! @brief Side of the deployment area.
+constexpr size_t width = discrete_sqrt(devnum * 3000);
+
 constexpr size_t dim = 3;
 constexpr size_t end = 1000;
 
@@ -24,7 +45,7 @@ using round_s = sequence::periodic<
     distribution::constant_n<times_t, end+2>
 >;
 
-using rectangle_d = distribution::rect_n<1, 0, 0, 0, side, side, height>;
+using rectangle_d = distribution::rect_n<1, 0, 0, 20, width, width, 20>;
 
 template <template<class> class T, typename S>
 using test_aggr_t = aggregators<
@@ -45,7 +66,7 @@ using test_store_t = tuple_store<
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
     avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant_n<double, devices>>
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant_n<double, devnum>>
 >;
 template <template<class> class T, typename... Ss>
 using test_option_t = common::type_sequence<test_aggr_t<T,Ss>..., test_store_t<T,Ss>..., test_func_t<T,Ss>...>;
@@ -80,9 +101,11 @@ DECLARE_OPTIONS(opt,
     exports<coordination::main_t>,
     round_schedule<round_s>,
     log_schedule<sequence::periodic_n<1, 0, 1, end>>,
-    spawn_schedule<sequence::multiple_n<devices, 0>>,
+    spawn_schedule<sequence::multiple_n<devnum, 0>>,
     tuple_store<
         speed,                          double,
+        devices,                        size_t,
+        side,                           size_t,
         proc_data,                      std::vector<color>,
         sent_count,                     size_t,
         node_color,                     color,
@@ -98,7 +121,9 @@ DECLARE_OPTIONS(opt,
     test_option_t<tree,      legacy, share, novel, wave>,
     init<
         x,                  rectangle_d,
-        speed,              distribution::constant_n<double, 5> // original value 1
+        speed,              distribution::constant_n<double, 5>,
+        devices,            distribution::constant_n<size_t, devnum>,
+        side,               distribution::constant_n<size_t, width>
     >,
     plot_type<plot_t>,
     dimension<dim>,

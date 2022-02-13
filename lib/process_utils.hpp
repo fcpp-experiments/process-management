@@ -123,6 +123,12 @@ namespace tags {
     //! @brief The movement speed of devices.
     struct speed {};
 
+    //! @brief The number of devices.
+    struct devices {};
+
+    //! @brief The side of deployment area.
+    struct side {};
+
     //! @brief Temporary data of active processes.
     struct proc_data {};
 

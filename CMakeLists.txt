@@ -9,7 +9,4 @@ project(
     DESCRIPTION "Management of the lifetime of FCPP processes."
 )
 
-fcpp_target(./run/spherical_process.cpp           ON)
-fcpp_target(./run/tree_process.cpp                ON)
-
-fcpp_test(./test/tester.cpp)
+fcpp_target(./run/graphic.cpp ON)
