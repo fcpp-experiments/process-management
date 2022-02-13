@@ -1,0 +1,9 @@
+*.pyc
+#*
+.#*
+bin/
+doc/
+output/
+plot/
+.vagrant/
+.DS_Store

@@ -11,10 +11,12 @@ constexpr size_t dim = 3;
 constexpr size_t end = 1000;
 
 //! @brief Average time of first delivery.
-struct avg_first_delivery {};
+template <typename T>
+struct avg_delay {};
 
 //! @brief Total active processes per unit of time.
-struct avg_active_proc {};
+template <typename T>
+struct avg_proc {};
 
 using round_s = sequence::periodic<
     distribution::interval_n<times_t, 0, 1>,
@@ -24,24 +26,52 @@ using round_s = sequence::periodic<
 
 using rectangle_d = distribution::rect_n<1, 0, 0, 0, side, side, height>;
 
-using aggregator_t = aggregators<
-    max_proc<spherical>,       aggregator::max<size_t>,
-    tot_proc<spherical>,       aggregator::sum<size_t>,
-    first_delivery<spherical>, aggregator::sum<double>,
-    sent_count<spherical>,     aggregator::sum<size_t>,
-    delivery_count<spherical>, aggregator::sum<size_t>,
-    repeat_count<spherical>,   aggregator::sum<size_t>
+template <template<class> class T, typename S>
+using test_aggr_t = aggregators<
+    max_proc<T<S>>,            aggregator::max<int>,
+    tot_proc<T<S>>,            aggregator::sum<int>,
+    first_delivery_tot<T<S>>,  aggregator::sum<times_t>,
+    delivery_count<T<S>>,      aggregator::sum<size_t>,
+    repeat_count<T<S>>,        aggregator::sum<size_t>
 >;
+template <template<class> class T, typename S>
+using test_store_t = tuple_store<
+    max_proc<T<S>>,            int,
+    tot_proc<T<S>>,            int,
+    first_delivery_tot<T<S>>,  times_t,
+    delivery_count<T<S>>,      size_t,
+    repeat_count<T<S>>,        size_t
+>;
+template <template<class> class T, typename S>
+using test_func_t = log_functors<
+    avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant_n<double, devices>>
+>;
+template <template<class> class T, typename... Ss>
+using test_option_t = common::type_sequence<test_aggr_t<T,Ss>..., test_store_t<T,Ss>..., test_func_t<T,Ss>...>;
+
+struct noaggr {
+    template <typename A>
+    using result_type = common::tagged_tuple_t<A, A>;
+};
+
+template <template<class> class T, typename A, template<class> class P, typename... Ts>
+using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P<Ts>>>::tags::front>...>;
+
+template <template<class> class T, typename A>
+using lines_t = plot::join<test_lines_t<T, A, spherical, legacy>>;
 
 template <typename... Ts>
-using lines_t = plot::join<plot::values<aggregator_t, common::type_sequence<>, Ts>...>;
-template <typename... Ts>
-using rows_t = plot::join<plot::value<Ts>...>;
-using maxs_t = plot::filter<plot::time, filter::below<100>, plot::split<plot::time, lines_t<max_proc<spherical>>>>;
-using tots_t = plot::split<plot::time, rows_t<avg_active_proc>>;
-using counts_t = plot::split<plot::time, lines_t<sent_count<spherical>, delivery_count<spherical>, repeat_count<spherical>>>;
-using delay_t = plot::split<plot::time, rows_t<avg_first_delivery>>;
-using plot_t = plot::join<maxs_t, tots_t, counts_t, delay_t>;
+using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
+
+using plot_t = plot::join<
+    time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
+    time_plot_t<lines_t<avg_proc, noaggr>>,
+    time_plot_t<lines_t<avg_delay, noaggr>>,
+    time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
+    time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
+    time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
+>;
 
 DECLARE_OPTIONS(opt,
     parallel<true>,
@@ -52,28 +82,23 @@ DECLARE_OPTIONS(opt,
     log_schedule<sequence::periodic_n<1, 0, 1, end>>,
     spawn_schedule<sequence::multiple_n<devices, 0>>,
     tuple_store<
-        speed,                         double,
-        max_proc<spherical>,           size_t,
-        tot_proc<spherical>,           size_t,
-        first_delivery<spherical>,     times_t,
-        sent_count<spherical>,         size_t,
-        delivery_count<spherical>,     size_t,
-        repeat_count<spherical>,       size_t,
-        center_dist,                   double,
-        node_color,                    color,
-        left_color,                    color,
-        right_color,                   color,
-        node_size,                     double,
-        node_shape,                    shape
+        speed,                          double,
+        proc_data,                      std::vector<color>,
+        sent_count,                     size_t,
+        node_color,                     color,
+        left_color,                     color,
+        right_color,                    color,
+        node_size,                      double,
+        node_shape,                     shape
     >,
-    aggregator_t,
-    log_functors<
-        avg_first_delivery, functor::div<aggregator::sum<first_delivery<spherical>, true>, aggregator::sum<delivery_count<spherical>, false>>,
-        avg_active_proc,    functor::div<functor::diff<aggregator::sum<tot_proc<spherical>, false>>, distribution::constant_n<double, devices>>
+    aggregators<
+        sent_count,         aggregator::sum<size_t>
     >,
+    test_option_t<spherical, legacy, share, novel, wave>,
+    test_option_t<tree,      legacy, share, novel, wave>,
     init<
         x,                  rectangle_d,
-	speed,              distribution::constant_n<double, 5> // original value 1
+        speed,              distribution::constant_n<double, 5> // original value 1
     >,
     plot_type<plot_t>,
     dimension<dim>,
