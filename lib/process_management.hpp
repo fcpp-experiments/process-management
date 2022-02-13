@@ -1,12 +1,12 @@
 // Copyright © 2022 Giorgio Audrito. All Rights Reserved.
 
 /**
- * @file process_utils.hpp
- * @brief General utility functions for aggregate processes.
+ * @file process_management.hpp
+ * @brief Case study on process lifetime management.
  */
 
-#ifndef FCPP_PROCESS_UTILS_H_
-#define FCPP_PROCESS_UTILS_H_
+#ifndef FCPP_PROCESS_MANAGEMENT_H_
+#define FCPP_PROCESS_MANAGEMENT_H_
 
 #include "lib/beautify.hpp"
 #include "lib/coordination.hpp"
@@ -328,4 +328,4 @@ FUN_EXPORT main_t = export_list<rectangle_walk_t<3>, spherical_test_t, bis_dista
 
 } // fcpp
 
-#endif // FCPP_PROCESS_UTILS_H_
+#endif // FCPP_PROCESS_MANAGEMENT_H_

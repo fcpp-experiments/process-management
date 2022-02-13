@@ -1,15 +1,15 @@
 // Copyright © 2022 Giorgio Audrito. All Rights Reserved.
 
 /**
- * @file spherical_process.hpp
- * @brief Aggregate process TODO.
+ * @file simulation_setup.hpp
+ * @brief Simulation setup for the process management case study.
  */
 
-#ifndef FCPP_SPHERICAL_PROCESS_H_
-#define FCPP_SPHERICAL_PROCESS_H_
+#ifndef FCPP_SIMULATION_SETUP_H_
+#define FCPP_SIMULATION_SETUP_H_
 
 #include "lib/fcpp.hpp"
-#include "process_utils.hpp"
+#include "process_management.hpp"
 
 
 /**
@@ -105,7 +105,10 @@ using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P
 
 //! @brief Lines for a given data and every test.
 template <template<class> class T, typename A>
-using lines_t = plot::join<test_lines_t<T, A, spherical, legacy>>;
+using lines_t = plot::join<
+    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
+    test_lines_t<T, A, tree,      legacy, share, novel, wave>
+>;
 
 //! @brief Time-based plot.
 template <typename... Ts>
@@ -171,4 +174,4 @@ DECLARE_OPTIONS(list,
 
 }
 
-#endif // FCPP_SPHERICAL_PROCESS_H_
+#endif // FCPP_SIMULATION_SETUP_H_

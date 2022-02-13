@@ -5,7 +5,7 @@
  * @brief Runs a single execution of the message dispatch case study with a graphical user interface.
  */
 
-#include "lib/spherical_process.hpp"
+#include "lib/simulation_setup.hpp"
 
 using namespace fcpp;
 
