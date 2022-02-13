@@ -224,21 +224,49 @@ FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 //! @brief Legacy termination logic (COORD19).
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t, T<tags::legacy>) {
+    bool terminating = s == status::terminated_output;
+    bool terminated = old(CALL, terminating, [&](bool ot){
+        return any_hood(CALL, nbr(CALL, ot), ot) or terminating;
+    });
+    bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
+    if (exiting) s = status::external;
+    else if (terminating) s = status::internal_output;
 }
 //! @brief Legacy termination logic updated to use share (LMCS2020) instead of rep+nbr.
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t, T<tags::share>) {
+    bool terminating = s == status::terminated_output;
+    bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
+        return any_hood(CALL, nt) or terminating;
+    });
+    bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
+    if (exiting) s = status::external;
+    else if (terminating) s = status::internal_output;
 }
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t, T<tags::novel>) {
+    bool terminating = s == status::terminated_output;
+    bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
+        return any_hood(CALL, nt) or terminating;
+    });
+    if (terminated) {
+        if (s == status::terminated_output) s = status::border_output;
+        if (s == status::internal) s = status::border;
+    }
 }
 //! @brief Wave-like termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, T<tags::wave>) {
+void termination_logic(ARGS, status& s, real_t ds, T<tags::wave>) {
+    termination_logic(node, call_point, s, ds, T<tags::novel>{});
+    real_t md = max_hood(CALL, nbr(CALL, ds), ds);
+    if (md <= old(CALL, -INF, md)) {
+        if (s == status::border_output) s = status::external_output;
+        else s = status::external;
+    }
 }
 //! @brief Export list for termination_logic.
-FUN_EXPORT termination_logic_t = export_list<bool>;
+FUN_EXPORT termination_logic_t = export_list<bool, real_t>;
 
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
