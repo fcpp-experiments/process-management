@@ -120,6 +120,15 @@ namespace tags {
     struct repeat_count {};
 
 
+    //! @brief Average time of first delivery.
+    template <typename T>
+    struct avg_delay {};
+
+    //! @brief Total active processes per unit of time.
+    template <typename T>
+    struct avg_proc {};
+
+
     //! @brief The movement speed of devices.
     struct speed {};
 
@@ -277,6 +286,42 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, s
 }
 //! @brief Exports for the main function.
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
+
+
+//! @brief Main function.
+MAIN() {
+    // import tags for convenience
+    using namespace tags;
+    // random walk
+    size_t l = node.storage(side{});
+    rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}), 1);
+    // basic node rendering
+    bool is_src = node.uid == 0;
+    node.storage(node_shape{}) = is_src ? shape::cube : shape::sphere;
+    node.storage(node_size{}) = is_src ? 16 : 10;
+    // random message with 1% probability during time [10..50]
+    common::option<message> m = get_message(CALL, node.storage(devices{}));
+    // tests spherical processes with legacy termination
+    spherical_test(CALL, m, INF, legacy{}, true);
+    spherical_test(CALL, m, INF, share{});
+    spherical_test(CALL, m, INF, novel{});
+    spherical_test(CALL, m, INF, wave{});
+    // spanning tree definition
+    double ds = bis_distance(CALL, is_src, 1, 100);
+    device_t parent = get<1>(min_hood(CALL, make_tuple(nbr(CALL, ds), node.nbr_uid())));
+    // routing sets along the tree
+    set_t below = sp_collection(CALL, ds, set_t{node.uid}, set_t{}, [](set_t x, set_t const& y){
+        x.insert(y.begin(), y.end());
+        return x;
+    });
+    // test tree processes with legacy termination
+    tree_test(CALL, m, parent, below, legacy{});
+    tree_test(CALL, m, parent, below, share{});
+    tree_test(CALL, m, parent, below, novel{});
+    tree_test(CALL, m, parent, below, wave{});
+}
+//! @brief Exports for the main function.
+FUN_EXPORT main_t = export_list<rectangle_walk_t<3>, spherical_test_t, bis_distance_t, real_t, sp_collection_t<double, set_t>, tree_test_t>;
 
 
 } // coordination
