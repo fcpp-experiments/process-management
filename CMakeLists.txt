@@ -10,3 +10,4 @@ project(
 )
 
 fcpp_target(./run/graphic.cpp ON)
+fcpp_target(./run/batch.cpp   OFF)

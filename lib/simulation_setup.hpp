@@ -50,7 +50,7 @@ constexpr size_t width = discrete_sqrt(devnum * 3000);
 constexpr size_t dim = 3;
 
 //! @brief End of simulated time.
-constexpr size_t end = 1000;
+constexpr size_t end = 500;
 
 //! @brief The randomised sequence of rounds for every node (about one every second, with 10% variance).
 using round_s = sequence::periodic<
@@ -115,20 +115,20 @@ template <typename... Ts>
 using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
 
 //! @brief Overall plot page.
-using plot_t = plot::join<
+using plot_t = plot::split<speed, plot::join<
     time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
     time_plot_t<lines_t<avg_proc, noaggr>>,
     time_plot_t<lines_t<avg_delay, noaggr>>,
     time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
     time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
     time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
->;
+>>;
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
-    parallel<true>,      // multithreading on node rounds
+    parallel<false>,     // no multithreading on node rounds
     synchronised<false>, // optimise for asynchronous networks
-    program<coordination::main>,   // program to be run (refers to MAIN above)
+    program<coordination::main>,   // program to be run (refers to MAIN in process_management.hpp)
     exports<coordination::main_t>, // export type list (types used in messages)
     round_schedule<round_s>, // the sequence generator for round events on nodes
     log_schedule<sequence::periodic_n<1, 0, 1, end>>, // the sequence generator for log events on the network
@@ -156,10 +156,11 @@ DECLARE_OPTIONS(list,
     // data initialisation
     init<
         x,                  rectangle_d,
-        speed,              distribution::constant_n<double, 5>,
+        speed,              distribution::constant_i<double, speed>,
         devices,            distribution::constant_n<size_t, devnum>,
         side,               distribution::constant_n<size_t, width>
     >,
+    extra_info<speed, double>, // use the globally provided speed for plotting
     plot_type<plot_t>, // the plot description to be used
     dimension<dim>, // dimensionality of the space
     connector<connect::fixed<comm, 1, dim>>, // connection allowed within a fixed comm range
