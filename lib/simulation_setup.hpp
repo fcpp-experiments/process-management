@@ -38,6 +38,7 @@ constexpr size_t discrete_sqrt(size_t n) {
 }
 
 //! @brief Number of devices.
+//constexpr size_t devnum = 300;
 constexpr size_t devnum = 300;
 
 //! @brief Communication radius.
@@ -50,8 +51,8 @@ constexpr size_t width = discrete_sqrt(devnum * 3000);
 constexpr size_t dim = 3;
 
 //! @brief End of simulated time.
-constexpr size_t end = 500;
-
+constexpr size_t end = 50;
+    
 //! @brief The randomised sequence of rounds for every node (about one every second, with 10% variance).
 using round_s = sequence::periodic<
     distribution::interval_n<times_t, 0, 1>,
@@ -106,8 +107,12 @@ using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P
 //! @brief Lines for a given data and every test.
 template <template<class> class T, typename A>
 using lines_t = plot::join<
-    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
-    test_lines_t<T, A, tree,      legacy, share, novel, wave>
+    //    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
+    //    test_lines_t<T, A, spherical, legacy>
+    //    test_lines_t<T, A, spherical, share>
+    //    test_lines_t<T, A, spherical, novel>
+    test_lines_t<T, A, spherical, share, novel>    
+    //    test_lines_t<T, A, tree,      legacy, share, novel, wave>
 >;
 
 //! @brief Time-based plot.
@@ -151,8 +156,12 @@ DECLARE_OPTIONS(list,
         sent_count,         aggregator::sum<size_t>
     >,
     // further options for each test
-    test_option_t<spherical, legacy, share, novel, wave>,
-    test_option_t<tree,      legacy, share, novel, wave>,
+		//    test_option_t<spherical, legacy, share, novel, wave>,
+		//		test_option_t<spherical, legacy>,
+		//		test_option_t<spherical, share>,
+		//		test_option_t<spherical, novel>,						
+		test_option_t<spherical, share, novel>,				
+		//    test_option_t<tree,      legacy, share, novel, wave>,
     // data initialisation
     init<
         x,                  rectangle_d,

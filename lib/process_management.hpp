@@ -8,6 +8,9 @@
 #ifndef FCPP_PROCESS_MANAGEMENT_H_
 #define FCPP_PROCESS_MANAGEMENT_H_
 
+// TODO remove
+#include <iostream>
+
 #include "lib/beautify.hpp"
 #include "lib/coordination.hpp"
 #include "lib/data.hpp"
@@ -160,6 +163,11 @@ namespace tags {
     struct node_shape {};
 }
 
+//! @brief Length of a round
+constexpr time_t period = 1;
+
+//! @brief Maximum discrepancy between space and time
+constexpr real_t timespace_threshold = 200;
 
 //! @brief Distance estimation which can only decrease over time.
 FUN real_t monotonic_distance(ARGS, bool source) {
@@ -176,9 +184,15 @@ FUN_EXPORT monotonic_distance_t = export_list<real_t>;
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
-    if (node.uid == 0 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    if (node.uid == 0 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
     //if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
-        m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
+	int to;
+	to = node.next_int(devices-1);
+	//	to = node.next_int(devices-1);
+	//	to = node.next_int(devices-1);		
+	//	int to = 224;
+	std::cout << to << std::endl;
+        m.emplace(node.uid, (device_t)to, node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -223,7 +237,7 @@ FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 
 //! @brief Legacy termination logic (COORD19).
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, T<tags::legacy>) {
+void termination_logic(ARGS, status& s, real_t, times_t, T<tags::legacy>) {
     bool terminating = s == status::terminated_output;
     bool terminated = old(CALL, terminating, [&](bool ot){
         return any_hood(CALL, nbr(CALL, ot), ot) or terminating;
@@ -234,18 +248,36 @@ void termination_logic(ARGS, status& s, real_t, T<tags::legacy>) {
 }
 //! @brief Legacy termination logic updated to use share (LMCS2020) instead of rep+nbr.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, T<tags::share>) {
+void termination_logic(ARGS, status& s, real_t, times_t, T<tags::share>) {
+    /*
+    // todo REMOVE
+    if (s == status::terminated_output)
+	std::cout << node.uid << " TERMINATED" << std::endl;
+    */
+    
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
+
+    /*
+    // todo REMOVE
+    if (exiting)
+	std::cout << node.uid << " EXITING" << std::endl;
+    */    
+
     if (exiting) s = status::external;
     else if (terminating) s = status::internal_output;
 }
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, T<tags::novel>) {
+void termination_logic(ARGS, status& s, real_t ds, times_t dt, T<tags::novel>) {
+    if (ds < timespace_threshold * (dt - period)) {
+	s = status::external;
+	return;
+    }
+    
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
@@ -257,7 +289,7 @@ void termination_logic(ARGS, status& s, real_t, T<tags::novel>) {
 }
 //! @brief Wave-like termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t ds, T<tags::wave>) {
+void termination_logic(ARGS, status& s, real_t ds, times_t, T<tags::wave>) {
     termination_logic(node, call_point, s, ds, T<tags::novel>{});
     real_t md = max_hood(CALL, nbr(CALL, ds), ds);
     if (md <= old(CALL, -INF, md)) {
@@ -278,8 +310,12 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, bool render) {
     message_log_type r = spawn(node, call_point, [&](message const& m){
         node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, 1, 1));
         double ds = monotonic_distance(CALL, m.from == node.uid);
+	times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
+					times_t t = min_hood(CALL, ndt + node.nbr_lag());
+					return node.uid == m.from ? 0 : t;
+				    });
         auto r = process(m, ds);
-        termination_logic(CALL, get<1>(r), ds, T{});
+        termination_logic(CALL, get<1>(r), ds, dt, T{});
         return r;
     }, std::forward<S>(key_set));
     // compute stats
@@ -294,7 +330,7 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, real_t max_di
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t ds){
         status s = node.uid == m.to ? status::terminated_output :
                    ds < max_distance ? status::internal : status::external;
-        return make_tuple(node.current_time(), s);
+	return make_tuple(node.current_time(), s);
     }, m, render);
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
@@ -330,10 +366,12 @@ MAIN() {
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
     // tests spherical processes with legacy termination
-    spherical_test(CALL, m, INF, legacy{}, true);
-    spherical_test(CALL, m, INF, share{});
-    spherical_test(CALL, m, INF, novel{});
-    spherical_test(CALL, m, INF, wave{});
+    //    spherical_test(CALL, m, INF, legacy{}, true);
+    //    spherical_test(CALL, m, INF, share{}, true);
+    spherical_test(CALL, m, INF, share{}, false);    
+    //    spherical_test(CALL, m, INF, novel{}, true);
+    spherical_test(CALL, m, INF, novel{}, true);    
+    //    spherical_test(CALL, m, INF, wave{}, true);
     // spanning tree definition
     double ds = bis_distance(CALL, is_src, 1, 100);
     device_t parent = get<1>(min_hood(CALL, make_tuple(nbr(CALL, ds), node.nbr_uid())));
@@ -343,10 +381,16 @@ MAIN() {
         return x;
     });
     // test tree processes with legacy termination
+    /*
     tree_test(CALL, m, parent, below, legacy{});
     tree_test(CALL, m, parent, below, share{});
     tree_test(CALL, m, parent, below, novel{});
     tree_test(CALL, m, parent, below, wave{});
+    */
+
+    // TODO remove
+    if (node.uid == 103)
+	node.storage(node_color{}) = color();
 }
 //! @brief Exports for the main function.
 FUN_EXPORT main_t = export_list<rectangle_walk_t<3>, spherical_test_t, bis_distance_t, real_t, sp_collection_t<double, set_t>, tree_test_t>;
