@@ -5,6 +5,9 @@
  * @brief Runs multiple executions of the message dispatch case study non-interactively from the command line, producing overall plots.
  */
 
+// TODO remove
+#include <iostream>
+
 #include "lib/simulation_setup.hpp"
 
 using namespace fcpp;
@@ -12,6 +15,7 @@ using namespace fcpp;
 int main() {
     // Construct the plotter object.
     option::plot_t p;
+    std::cout << "/*\n";
     // The component type (batch simulator with given options).
     using comp_t = component::batch_simulator<option::list>;
     // The list of initialisation values to be used for simulations.
@@ -23,9 +27,13 @@ int main() {
         batch::stringify<option::output>("output/batch", "txt"),
         batch::constant<option::plotter>(&p) // reference to the plotter object
     );
+
+    //    std::cout << init_list << std::endl;
+
     // Runs the given simulations.
     batch::run(comp_t{}, init_list);
     // Builds the resulting plots.
+    std::cout << "*/\n";
     std::cout << plot::file("batch", p.build());
     return 0;
 }

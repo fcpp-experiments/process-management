@@ -191,7 +191,7 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
 	//	to = node.next_int(devices-1);
 	//	to = node.next_int(devices-1);		
 	//	int to = 224;
-	std::cout << to << std::endl;
+	//	std::cout << to << std::endl;
         m.emplace(node.uid, (device_t)to, node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
