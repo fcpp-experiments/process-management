@@ -8,66 +8,9 @@
 #ifndef FCPP_PROCESS_MANAGEMENT_H_
 #define FCPP_PROCESS_MANAGEMENT_H_
 
-// TODO remove
-#include <iostream>
-
-#include "lib/beautify.hpp"
-#include "lib/coordination.hpp"
-#include "lib/data.hpp"
-
-
-//! @brief Struct representing a message.
-struct message {
-    //! @brief Sender UID.
-    fcpp::device_t from;
-    //! @brief Receiver UID.
-    fcpp::device_t to;
-    //! @brief Creation timestamp.
-    fcpp::times_t time;
-    //! @brief Data content.
-    fcpp::real_t data;
-
-    //! @brief Empty constructor.
-    message() = default;
-
-    //! @brief Member constructor.
-    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time, fcpp::real_t data) : from(from), to(to), time(time), data(data) {}
-
-    //! @brief Equality operator.
-    bool operator==(message const& m) const {
-        return from == m.from and to == m.to and time == m.time and data == m.data;
-    }
-
-    //! @brief Hash computation.
-    size_t hash() const {
-        constexpr size_t offs = sizeof(size_t)*CHAR_BIT/3;
-        return (size_t(time) << (2*offs)) | (size_t(from) << (offs)) | size_t(to);
-    }
-
-    //! @brief Serialises the content from/to a given input/output stream.
-    template <typename S>
-    S& serialize(S& s) {
-        return s & from & to & time & data;
-    }
-
-    //! @brief Serialises the content from/to a given input/output stream (const overload).
-    template <typename S>
-    S& serialize(S& s) const {
-        return s << from << to << time << data;
-    }
-};
-
-
-namespace std {
-    //! @brief Hasher object for the message struct.
-    template <>
-    struct hash<message> {
-        //! @brief Produces an hash for a message, combining to and from into a size_t.
-        size_t operator()(message const& m) const {
-            return m.hash();
-        }
-    };
-}
+#include "lib/common/option.hpp"
+#include "lib/component/calculus.hpp"
+#include "lib/generals.hpp"
 
 
 /**
@@ -79,120 +22,13 @@ namespace fcpp {
 namespace coordination {
 
 
-namespace tags {
-    //! @brief Legacy termination policy.
-    struct legacy {};
-
-    //! @brief Legacy termination policy with share.
-    struct share {};
-
-    //! @brief Novel termination policy.
-    struct novel {};
-
-    //! @brief Wave-like termination policy.
-    struct wave {};
-
-
-    //! @brief Spherical process.
-    template <typename T>
-    struct spherical {};
-
-    //! @brief Tree process.
-    template <typename T>
-    struct tree {};
-
-
-    //! @brief The maximum number of processes ever run by the node.
-    template <typename T>
-    struct max_proc {};
-
-    //! @brief The total number of processes ever run by the node.
-    template <typename T>
-    struct tot_proc {};
-
-    //! @brief Total time of first delivery.
-    template <typename T>
-    struct first_delivery_tot {};
-
-    //! @brief Total number of first deliveries.
-    template <typename T>
-    struct delivery_count {};
-
-    //! @brief Total number of repeated deliveries.
-    template <typename T>
-    struct repeat_count {};
-
-
-    //! @brief Average time of first delivery.
-    template <typename T>
-    struct avg_delay {};
-
-    //! @brief Total active processes per unit of time.
-    template <typename T>
-    struct avg_proc {};
-
-
-    //! @brief The movement speed of devices.
-    struct speed {};
-
-    //! @brief The number of devices.
-    struct devices {};
-
-    //! @brief The side of deployment area.
-    struct side {};
-
-    //! @brief Temporary data of active processes.
-    struct proc_data {};
-
-    //! @brief Total number of sent messages.
-    struct sent_count {};
-
-    //! @brief Color of the current node.
-    struct node_color {};
-
-    //! @brief Left color of the current node.
-    struct left_color {};
-
-    //! @brief Right color of the current node.
-    struct right_color {};
-
-    //! @brief Size of the current node.
-    struct node_size {};
-
-    //! @brief Shape of the current node.
-    struct node_shape {};
-}
-
-//! @brief Length of a round
-constexpr time_t period = 1;
-
-//! @brief Maximum discrepancy between space and time
-constexpr real_t timespace_threshold = 200;
-
-//! @brief Distance estimation which can only decrease over time.
-FUN real_t monotonic_distance(ARGS, bool source) {
-    return nbr(node, call_point, INF, [&](field<real_t> nd){
-        real_t d = min_hood(CALL, nd + node.nbr_dist()); // inclusive
-        return source ? 0 : d;
-    });
-}
-//! @brief Export list for monotonic_distance.
-FUN_EXPORT monotonic_distance_t = export_list<real_t>;
-
-
 //! @brief Possibly generates a message, given the number of devices and the experiment tag.
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
     if (node.uid == 0 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
-	//    if (node.current_time() > 1 and node.current_time() < 25 and node.next_real() < 0.01) {
-	int to;
-	to = node.next_int(devices-1);
-	//	to = node.next_int(devices-1);
-	//	to = node.next_int(devices-1);		
-	//	int to = 224;
-	std::cout << to << std::endl;
-        m.emplace(node.uid, (device_t)to, node.current_time(), node.next_real());
+//    if (node.current_time() > 1 and node.current_time() < 25 and node.next_real() < 0.01) {
+        m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -246,8 +82,7 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::legacy>)
 
     if (exiting) s = status::external;
     else if (terminating) s = status::internal_output;
- }
-
+}
 //! @brief Legacy termination logic updated to use share (LMCS2020) instead of rep+nbr.
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) {
@@ -256,19 +91,16 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) 
     if (s == status::terminated_output)
 	std::cout << node.uid << " TERMINATED" << std::endl;
     */
-    
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-
     /*
     // todo REMOVE
     if (exiting)
 	std::cout << node.uid << " EXITING" << std::endl;
-    */    
-
+    */
     if (exiting) s = status::external;
     else if (terminating) s = status::internal_output;
 }
@@ -276,34 +108,9 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) 
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::novel>) {
     times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
-				    times_t t = min_hood(CALL, ndt + node.nbr_lag());
-				    return node.uid == m.from ? 0 : t;
-				});
-
-    if (ds < timespace_threshold * (dt - period)) {
-	s = status::external;
-	return;
-    }
-    
-    bool terminating = s == status::terminated_output;
-    bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
-        return any_hood(CALL, nt) or terminating;
+        times_t t = min_hood(CALL, ndt + node.nbr_lag());
+        return node.uid == m.from ? 0 : t;
     });
-    if (terminated) {
-        if (s == status::terminated_output) s = status::border_output;
-        if (s == status::internal) s = status::border;
-    }
-}
-//! @brief Wave-like termination logic.
-template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wave>) {
-    //    termination_logic(node, call_point, s, ds, dt, T<tags::novel>{});
-    // novel* START
-    times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
-				    times_t t = min_hood(CALL, ndt + node.nbr_lag());
-				    return (node.uid == m.from) && (counter(CALL)==1) ? 0 : t;
-				});
-
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
@@ -312,8 +119,22 @@ void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wav
         if (s == status::terminated_output) s = status::border_output;
         if (s == status::internal) s = status::border;
     }
-    // novel* END
-
+}
+//! @brief Wave-like termination logic.
+template <typename node_t, template<class> class T>
+void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wave>) {
+    times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
+        times_t t = min_hood(CALL, ndt + node.nbr_lag());
+        return node.uid == m.from and counter(CALL) == 1 ? 0 : t;
+    });
+    bool terminating = s == status::terminated_output;
+    bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
+        return any_hood(CALL, nt) or terminating;
+    });
+    if (terminated or ds < timespace_threshold * (dt - period)) {
+        if (s == status::terminated_output) s = status::border_output;
+        if (s == status::internal) s = status::border;
+    }
     /*
     real_t md = max_hood(CALL, nbr(CALL, ds), ds);
     if (md <= old(CALL, -INF, md)) {
@@ -323,8 +144,7 @@ void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wav
     */
 }
 //! @brief Export list for termination_logic.
-    FUN_EXPORT termination_logic_t = export_list<bool, real_t, counter_t<>>;
-//    FUN_EXPORT termination_logic_t = export_list<bool, real_t>;    
+FUN_EXPORT termination_logic_t = export_list<bool, counter_t<>, real_t>;
 
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
@@ -336,12 +156,6 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, bool render) {
     message_log_type r = spawn(node, call_point, [&](message const& m){
         node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, 1, 1));
         double ds = monotonic_distance(CALL, m.from == node.uid);
-	/*
-	times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
-					times_t t = min_hood(CALL, ndt + node.nbr_lag());
-					return node.uid == m.from ? 0 : t;
-				    });
-	*/
         auto r = process(m, ds);
         termination_logic(CALL, get<1>(r), ds, m, T{});
         return r;
@@ -380,7 +194,7 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, s
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
 
 
-//! @brief Main function.
+//! @brief Main case study function.
 MAIN() {
     // import tags for convenience
     using namespace tags;
@@ -393,31 +207,32 @@ MAIN() {
     node.storage(node_size{}) = is_src ? 16 : 10;
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
+#ifndef NOSPHERE
     // tests spherical processes with legacy termination
-    spherical_test(CALL, m, INF, legacy{}, true);
-    //    spherical_test(CALL, m, INF, share{}, false);    
-    //    spherical_test(CALL, m, INF, novel{}, false);
-    //    spherical_test(CALL, m, INF, wave{}, true);
+    spherical_test(CALL, m, INF, legacy{});
+    spherical_test(CALL, m, INF, share{});
+    spherical_test(CALL, m, INF, novel{});
+    spherical_test(CALL, m, INF, wave{});
+#endif
     // spanning tree definition
-
-
     double ds = bis_distance(CALL, is_src, 1, 100);
     //    double ds = flex_distance(CALL, is_src, 1, 100);
-
     device_t parent = get<1>(min_hood(CALL, make_tuple(nbr(CALL, ds), node.nbr_uid())));
     // routing sets along the tree
     set_t below = sp_collection(CALL, ds, set_t{node.uid}, set_t{}, [](set_t x, set_t const& y){
         x.insert(y.begin(), y.end());
         return x;
     });
+#ifndef NOTREE
     // test tree processes with legacy termination
-    //    tree_test(CALL, m, parent, below, legacy{}, true);
-    //    tree_test(CALL, m, parent, below, share{}, true);
-    //    tree_test(CALL, m, parent, below, novel{});
-    //    tree_test(CALL, m, parent, below, wave{});
+    tree_test(CALL, m, parent, below, legacy{});
+    tree_test(CALL, m, parent, below, share{});
+    tree_test(CALL, m, parent, below, novel{});
+    tree_test(CALL, m, parent, below, wave{});
+#endif
 }
 //! @brief Exports for the main function.
-FUN_EXPORT main_t = export_list<rectangle_walk_t<3>, spherical_test_t, bis_distance_t, real_t, sp_collection_t<double, set_t>, tree_test_t>;
+struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, bis_distance_t, real_t, sp_collection_t<double, set_t>, tree_test_t> {};
 
 
 } // coordination

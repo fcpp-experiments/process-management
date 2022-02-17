@@ -9,13 +9,20 @@
 #define FCPP_SIMULATION_SETUP_H_
 
 #include "lib/fcpp.hpp"
-#include "process_management.hpp"
+#include "lib/generals.hpp"
 
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
 namespace fcpp {
+
+//! @cond INTERNAL
+namespace coordination {
+    struct main;   // forward declaration of main function
+    struct main_t; // forward declaration of main exports
+}
+//! @endcond
 
 
 //! @brief Namespace for component options.
@@ -26,33 +33,7 @@ using namespace component::tags;
 //! @brief Import tags used by aggregate functions.
 using namespace coordination::tags;
 
-//! @brief Minimum number whose square is at least n.
-constexpr size_t discrete_sqrt(size_t n) {
-    size_t lo = 0, hi = n, mid = 0;
-    while (lo < hi) {
-        mid = (lo + hi)/2;
-        if (mid*mid < n) lo = mid+1;
-        else hi = mid;
-    }
-    return lo;
-}
 
-//! @brief Number of devices.
-//constexpr size_t devnum = 300;
-constexpr size_t devnum = 300;
-
-//! @brief Communication radius.
-constexpr size_t comm = 100;
-
-//! @brief Side of the deployment area.
-constexpr size_t width = discrete_sqrt(devnum * 3000);
-
-//! @brief Dimensionality of the space.
-constexpr size_t dim = 3;
-
-//! @brief End of simulated time.
-constexpr size_t end = 50;
-    
 //! @brief The randomised sequence of rounds for every node (about one every second, with 10% variance).
 using round_s = sequence::periodic<
     distribution::interval_n<times_t, 0, 1>,
@@ -107,17 +88,13 @@ using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P
 //! @brief Lines for a given data and every test.
 template <template<class> class T, typename A>
 using lines_t = plot::join<
-    //    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
-    test_lines_t<T, A, spherical, legacy>
-    //    test_lines_t<T, A, spherical, share>
-    //    test_lines_t<T, A, spherical, novel>
-    //    test_lines_t<T, A, spherical, wave>    
-    //    test_lines_t<T, A, spherical, novel, wave>
-    //    test_lines_t<T, A, spherical, share, novel>
-    //    test_lines_t<T, A, spherical, legacy, share, novel>    
-    //    test_lines_t<T, A, tree,      legacy, share, novel, wave>
-    //    test_lines_t<T, A, tree,      legacy>
-    //    test_lines_t<T, A, tree,      share>        
+#ifndef NOSPHERE
+    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
+#endif
+#ifndef NOTREE
+    test_lines_t<T, A, tree,      legacy, share, novel, wave>,
+#endif
+    plot::none
 >;
 
 //! @brief Time-based plot.
@@ -126,15 +103,16 @@ using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
 
 //! @brief Overall plot page.
 using plot_t = plot::split<speed, plot::join<
-				      time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
-				      time_plot_t<lines_t<avg_proc, noaggr>>,
-				      // TODO activate 
-				      //				      time_plot_t<lines_t<avg_delay, noaggr>>,
-				      time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
-				      time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>
-				      // TODO activate
-				      //				      time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
+    time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
+    time_plot_t<lines_t<avg_proc, noaggr>>,
+    time_plot_t<lines_t<avg_delay, noaggr>>,
+    time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
+    time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
+    time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
 >>;
+
+//! @brief Maximum admissible value for a seed.
+constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_t>::max(), std::numeric_limits<intmax_t>::max());
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
@@ -163,20 +141,16 @@ DECLARE_OPTIONS(list,
         sent_count,         aggregator::sum<size_t>
     >,
     // further options for each test
-		//    test_option_t<spherical, legacy, share, novel, wave>,
-		test_option_t<spherical, legacy>,
-		//		test_option_t<spherical, share>,
-		//		test_option_t<spherical, novel>,
-		//		test_option_t<spherical, wave>,
-		//		test_option_t<spherical, legacy, share, novel>,
-		//	        test_option_t<spherical, share, novel>,
-		//		test_option_t<spherical, novel, wave>,				
-		//    test_option_t<tree,      legacy, share, novel, wave>,
-		//		test_option_t<tree,      legacy>,
-		//		test_option_t<tree,      share>,		
+#ifndef NOSPHERE
+    test_option_t<spherical, legacy, share, novel, wave>,
+#endif
+#ifndef NOTREE
+    test_option_t<tree,      legacy, share, novel, wave>,
+#endif
     // data initialisation
     init<
         x,                  rectangle_d,
+        seed,               distribution::interval_n<uint_fast32_t, 0, seed_max>,
         speed,              distribution::constant_i<double, speed>,
         devices,            distribution::constant_n<size_t, devnum>,
         side,               distribution::constant_n<size_t, width>
