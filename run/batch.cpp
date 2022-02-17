@@ -11,7 +11,7 @@
 using namespace fcpp;
 
 //! @brief Number of runs to be averaged.
-constexpr size_t runs = 10;
+constexpr int runs = 10;
 
 int main() {
     // Construct the plotter object.
