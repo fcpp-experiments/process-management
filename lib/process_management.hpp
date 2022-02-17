@@ -237,18 +237,20 @@ FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 
 //! @brief Legacy termination logic (COORD19).
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, times_t, T<tags::legacy>) {
-    bool terminating = s == status::terminated_output;
-    bool terminated = old(CALL, terminating, [&](bool ot){
+void termination_logic(ARGS, status& s, real_t, message const&, T<tags::legacy>) {
+     bool terminating = s == status::terminated_output;
+     bool terminated = old(CALL, terminating, [&](bool ot){
         return any_hood(CALL, nbr(CALL, ot), ot) or terminating;
-    });
+     });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
+
     if (exiting) s = status::external;
     else if (terminating) s = status::internal_output;
-}
+ }
+
 //! @brief Legacy termination logic updated to use share (LMCS2020) instead of rep+nbr.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, times_t, T<tags::share>) {
+void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) {
     /*
     // todo REMOVE
     if (s == status::terminated_output)
@@ -418,10 +420,6 @@ MAIN() {
     //    tree_test(CALL, m, parent, below, share{}, true);
     //    tree_test(CALL, m, parent, below, novel{});
     //    tree_test(CALL, m, parent, below, wave{});
-
-    // TODO remove
-    if (node.uid == 279)
-	node.storage(node_color{}) = color();
 }
 //! @brief Exports for the main function.
 FUN_EXPORT main_t = export_list<rectangle_walk_t<3>, spherical_test_t, bis_distance_t, real_t, sp_collection_t<double, set_t>, tree_test_t>;
