@@ -108,11 +108,11 @@ using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P
 template <template<class> class T, typename A>
 using lines_t = plot::join<
     //    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
-    //    test_lines_t<T, A, spherical, legacy>
+    test_lines_t<T, A, spherical, legacy>
     //    test_lines_t<T, A, spherical, share>
     //    test_lines_t<T, A, spherical, novel>
     //    test_lines_t<T, A, spherical, wave>    
-    test_lines_t<T, A, spherical, novel, wave>
+    //    test_lines_t<T, A, spherical, novel, wave>
     //    test_lines_t<T, A, spherical, share, novel>
     //    test_lines_t<T, A, spherical, legacy, share, novel>    
     //    test_lines_t<T, A, tree,      legacy, share, novel, wave>
@@ -164,13 +164,13 @@ DECLARE_OPTIONS(list,
     >,
     // further options for each test
 		//    test_option_t<spherical, legacy, share, novel, wave>,
-		//		test_option_t<spherical, legacy>,
+		test_option_t<spherical, legacy>,
 		//		test_option_t<spherical, share>,
 		//		test_option_t<spherical, novel>,
 		//		test_option_t<spherical, wave>,
 		//		test_option_t<spherical, legacy, share, novel>,
 		//	        test_option_t<spherical, share, novel>,
-		test_option_t<spherical, novel, wave>,				
+		//		test_option_t<spherical, novel, wave>,				
 		//    test_option_t<tree,      legacy, share, novel, wave>,
 		//		test_option_t<tree,      legacy>,
 		//		test_option_t<tree,      share>,		

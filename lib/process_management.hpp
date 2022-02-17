@@ -184,8 +184,8 @@ FUN_EXPORT monotonic_distance_t = export_list<real_t>;
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
-    //    if (node.uid == 0 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
-    if (node.current_time() > 1 and node.current_time() < 25 and node.next_real() < 0.01) {
+    if (node.uid == 0 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
+	//    if (node.current_time() > 1 and node.current_time() < 25 and node.next_real() < 0.01) {
 	int to;
 	to = node.next_int(devices-1);
 	//	to = node.next_int(devices-1);
@@ -304,16 +304,11 @@ void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wav
 				    return (node.uid == m.from) && (counter(CALL)==1) ? 0 : t;
 				});
 
-    if (ds < timespace_threshold * (dt - period)) {
-	s = status::border;
-	return;
-    }
-    
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
-    if (terminated) {
+    if (terminated or ds < timespace_threshold * (dt - period)) {
         if (s == status::terminated_output) s = status::border_output;
         if (s == status::internal) s = status::border;
     }
@@ -399,10 +394,10 @@ MAIN() {
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
     // tests spherical processes with legacy termination
-    //    spherical_test(CALL, m, INF, legacy{}, true);
+    spherical_test(CALL, m, INF, legacy{}, true);
     //    spherical_test(CALL, m, INF, share{}, false);    
-    spherical_test(CALL, m, INF, novel{}, false);
-    spherical_test(CALL, m, INF, wave{}, true);
+    //    spherical_test(CALL, m, INF, novel{}, false);
+    //    spherical_test(CALL, m, INF, wave{}, true);
     // spanning tree definition
 
 
