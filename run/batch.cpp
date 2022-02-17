@@ -21,7 +21,9 @@ int main() {
     // The list of initialisation values to be used for simulations.
     auto init_list = batch::make_tagged_tuple_sequence(
         batch::arithmetic<option::seed>(1, runs, 1), // 10 different random seeds
-        batch::arithmetic<option::speed>(size_t(0), comm/10, comm/50), // 6 different speeds
+        batch::arithmetic<option::dens>(10, 20, 10), // 2 different densities
+        batch::arithmetic<option::hops>(5, 10, 5), // 2 different hop sizes
+        batch::arithmetic<option::speed>(0.0, 0.1, 0.05), // 3 different speeds
         // generate output file name for the run
         batch::stringify<option::output>("output/batch", "txt"),
         batch::constant<option::plotter>(&p) // reference to the plotter object

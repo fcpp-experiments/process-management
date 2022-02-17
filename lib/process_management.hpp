@@ -22,6 +22,16 @@ namespace fcpp {
 namespace coordination {
 
 
+//! @brief Length of a round
+constexpr size_t period = 1;
+
+//! @brief Communication radius.
+constexpr size_t comm = 100;
+
+//! @brief Maximum discrepancy between space and time
+constexpr real_t timespace_threshold = 2.0 * comm / period;
+
+
 //! @brief Possibly generates a message, given the number of devices and the experiment tag.
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;

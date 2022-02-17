@@ -25,6 +25,19 @@ namespace coordination {
 //! @endcond
 
 
+//! @brief Length of a round
+constexpr size_t period = 1;
+
+//! @brief Communication radius.
+constexpr size_t comm = 100;
+
+//! @brief Dimensionality of the space.
+constexpr size_t dim = 3;
+
+//! @brief End of simulated time.
+constexpr size_t end = 50;
+
+
 //! @brief Namespace for component options.
 namespace option {
 
@@ -41,8 +54,37 @@ using round_s = sequence::periodic<
     distribution::constant_n<times_t, end+2>
 >;
 
+
+//! @brief Maximum admissible value for a seed.
+constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_t>::max(), std::numeric_limits<intmax_t>::max());
+
+//! @brief Shorthand for a constant numeric distribution.
+template <intmax_t num, intmax_t den = 1>
+using n = distribution::constant_n<double, num, den>;
+
+//! @brief Shorthand for an constant input distribution.
+template <typename T>
+using i = distribution::constant_i<double, T>;
+
+//! @brief Functor calculating X/(X+1.0).
+template <typename X>
+using func_ratio = functor::div<X, functor::add<n<1>, X>>;
+
+//! @brief Functor calculating area side from density and hops.
+using func_side = functor::mul<
+    func_ratio<functor::mul<i<dens>, n<2>>>,
+    functor::mul<i<hops>, n<comm*10000, 14142>>
+>;
+
+//! @brief Functor calculating device number from density and hops.
+using func_dev = functor::cast<functor::add<functor::div<
+    functor::mul<functor::pow<func_side, n<2>>, i<dens>>,
+    n<31416*comm*comm, 10000>
+>, n<1,2>>, size_t>;
+
 //! @brief The distribution of initial node positions (random in a given rectangle).
-using rectangle_d = distribution::rect_n<1, 0, 0, 20, width, width, 20>;
+using rectangle_d = distribution::rect<n<0>, n<0>, n<20>, func_side, func_side, n<20>>;
+
 
 //! @brief Aggregators for a given test.
 template <template<class> class T, typename S>
@@ -68,12 +110,13 @@ using test_store_t = tuple_store<
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
     avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant_n<double, devnum>>
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<func_dev>>
 >;
 
 //! @brief Overall options (aggregator, storage, functors) for given tests.
 template <template<class> class T, typename... Ss>
 using test_option_t = common::type_sequence<test_aggr_t<T,Ss>..., test_store_t<T,Ss>..., test_func_t<T,Ss>...>;
+
 
 //! @brief Dummy aggregator for functor tags.
 struct noaggr {
@@ -102,7 +145,7 @@ template <typename... Ts>
 using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
 
 //! @brief Overall plot page.
-using plot_t = plot::split<speed, plot::join<
+using plot_t = plot::split<common::type_sequence<dens, hops, speed>, plot::join<
     time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
     time_plot_t<lines_t<avg_proc, noaggr>>,
     time_plot_t<lines_t<avg_delay, noaggr>>,
@@ -111,8 +154,6 @@ using plot_t = plot::split<speed, plot::join<
     time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
 >>;
 
-//! @brief Maximum admissible value for a seed.
-constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_t>::max(), std::numeric_limits<intmax_t>::max());
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
@@ -122,12 +163,12 @@ DECLARE_OPTIONS(list,
     exports<coordination::main_t>, // export type list (types used in messages)
     round_schedule<round_s>, // the sequence generator for round events on nodes
     log_schedule<sequence::periodic_n<1, 0, 1, end>>, // the sequence generator for log events on the network
-    spawn_schedule<sequence::multiple_n<devnum, 0>>, // the sequence generator of node creation events on the network
+    spawn_schedule<sequence::multiple<func_dev, n<0>>>, // the sequence generator of node creation events on the network
     // the basic contents of the node storage
     tuple_store<
         speed,                          double,
         devices,                        size_t,
-        side,                           size_t,
+        side,                           double,
         proc_data,                      std::vector<color>,
         sent_count,                     size_t,
         node_color,                     color,
@@ -151,11 +192,16 @@ DECLARE_OPTIONS(list,
     init<
         x,                  rectangle_d,
         seed,               distribution::interval_n<uint_fast32_t, 0, seed_max>,
-        speed,              distribution::constant_i<double, speed>,
-        devices,            distribution::constant_n<size_t, devnum>,
-        side,               distribution::constant_n<size_t, width>
+        speed,              functor::mul<i<speed>, n<comm, period>>,
+        side,               func_side,
+        devices,            func_dev
     >,
-    extra_info<speed, double>, // use the globally provided speed for plotting
+    // general parameters to use for plotting
+    extra_info<
+        dens,   int,
+        hops,   int,
+        speed,  double
+    >,
     plot_type<plot_t>, // the plot description to be used
     dimension<dim>, // dimensionality of the space
     connector<connect::fixed<comm, 1, dim>>, // connection allowed within a fixed comm range

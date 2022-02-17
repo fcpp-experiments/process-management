@@ -72,40 +72,6 @@ namespace std {
  */
 namespace fcpp {
 
-
-//! @brief Minimum number whose square is at least n.
-constexpr size_t discrete_sqrt(size_t n) {
-    size_t lo = 0, hi = n, mid = 0;
-    while (lo < hi) {
-        mid = (lo + hi)/2;
-        if (mid*mid < n) lo = mid+1;
-        else hi = mid;
-    }
-    return lo;
-}
-
-//! @brief Length of a round
-constexpr time_t period = 1;
-
-//! @brief Maximum discrepancy between space and time
-constexpr real_t timespace_threshold = 200;
-
-//! @brief Number of devices.
-constexpr size_t devnum = 300;
-
-//! @brief Communication radius.
-constexpr size_t comm = 100;
-
-//! @brief Side of the deployment area.
-constexpr size_t width = discrete_sqrt(devnum * 3000);
-
-//! @brief Dimensionality of the space.
-constexpr size_t dim = 3;
-
-//! @brief End of simulated time.
-constexpr size_t end = 50;
-
-
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
@@ -164,6 +130,12 @@ namespace tags {
 
     //! @brief The movement speed of devices.
     struct speed {};
+
+    //! @brief The number of hops in the network.
+    struct hops {};
+
+    //! @brief The density of devices.
+    struct dens {};
 
     //! @brief The number of devices.
     struct devices {};
