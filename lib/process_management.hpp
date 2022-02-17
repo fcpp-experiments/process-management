@@ -305,7 +305,7 @@ void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wav
 				});
 
     if (ds < timespace_threshold * (dt - period)) {
-	s = status::external;
+	s = status::border;
 	return;
     }
     
