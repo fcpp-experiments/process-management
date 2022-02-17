@@ -111,8 +111,13 @@ using lines_t = plot::join<
     //    test_lines_t<T, A, spherical, legacy>
     //    test_lines_t<T, A, spherical, share>
     //    test_lines_t<T, A, spherical, novel>
-    test_lines_t<T, A, spherical, share, novel>    
+    //    test_lines_t<T, A, spherical, wave>    
+    test_lines_t<T, A, spherical, novel, wave>
+    //    test_lines_t<T, A, spherical, share, novel>
+    //    test_lines_t<T, A, spherical, legacy, share, novel>    
     //    test_lines_t<T, A, tree,      legacy, share, novel, wave>
+    //    test_lines_t<T, A, tree,      legacy>
+    //    test_lines_t<T, A, tree,      share>        
 >;
 
 //! @brief Time-based plot.
@@ -121,12 +126,14 @@ using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
 
 //! @brief Overall plot page.
 using plot_t = plot::split<speed, plot::join<
-    time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
-    time_plot_t<lines_t<avg_proc, noaggr>>,
-    time_plot_t<lines_t<avg_delay, noaggr>>,
-    time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
-    time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
-    time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
+				      time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
+				      time_plot_t<lines_t<avg_proc, noaggr>>,
+				      // TODO activate 
+				      //				      time_plot_t<lines_t<avg_delay, noaggr>>,
+				      time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
+				      time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>
+				      // TODO activate
+				      //				      time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
 >>;
 
 //! @brief The general simulation options.
@@ -159,9 +166,14 @@ DECLARE_OPTIONS(list,
 		//    test_option_t<spherical, legacy, share, novel, wave>,
 		//		test_option_t<spherical, legacy>,
 		//		test_option_t<spherical, share>,
-		//		test_option_t<spherical, novel>,						
-		test_option_t<spherical, share, novel>,				
+		//		test_option_t<spherical, novel>,
+		//		test_option_t<spherical, wave>,
+		//		test_option_t<spherical, legacy, share, novel>,
+		//	        test_option_t<spherical, share, novel>,
+		test_option_t<spherical, novel, wave>,				
 		//    test_option_t<tree,      legacy, share, novel, wave>,
+		//		test_option_t<tree,      legacy>,
+		//		test_option_t<tree,      share>,		
     // data initialisation
     init<
         x,                  rectangle_d,

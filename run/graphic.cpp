@@ -14,7 +14,7 @@ int main() {
     option::plot_t p;
     std::cout << "/*\n";
     //    for (int speed = 0; speed <= 2; speed += 2) {
-    for (int speed = 4; speed <= 4; speed += 2) {
+    for (int speed = 2; speed <= 2; speed += 2) {
         // The network object type (interactive simulator with given options).
         using net_t = component::interactive_simulator<option::list>::net;
         // The initialisation values (simulation name, non-deterministic threshold, device speed, plotter object).

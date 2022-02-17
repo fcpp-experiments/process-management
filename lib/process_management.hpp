@@ -184,14 +184,14 @@ FUN_EXPORT monotonic_distance_t = export_list<real_t>;
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
-    if (node.uid == 0 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
-    //if (node.current_time() > 10 and node.current_time() < 50 and node.next_real() < 0.01) {
+    //    if (node.uid == 0 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
+    if (node.current_time() > 1 and node.current_time() < 25 and node.next_real() < 0.01) {
 	int to;
 	to = node.next_int(devices-1);
 	//	to = node.next_int(devices-1);
 	//	to = node.next_int(devices-1);		
 	//	int to = 224;
-	//	std::cout << to << std::endl;
+	std::cout << to << std::endl;
         m.emplace(node.uid, (device_t)to, node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
@@ -272,7 +272,12 @@ void termination_logic(ARGS, status& s, real_t, times_t, T<tags::share>) {
 }
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t ds, times_t dt, T<tags::novel>) {
+void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::novel>) {
+    times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
+				    times_t t = min_hood(CALL, ndt + node.nbr_lag());
+				    return node.uid == m.from ? 0 : t;
+				});
+
     if (ds < timespace_threshold * (dt - period)) {
 	s = status::external;
 	return;
@@ -289,16 +294,40 @@ void termination_logic(ARGS, status& s, real_t ds, times_t dt, T<tags::novel>) {
 }
 //! @brief Wave-like termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t ds, times_t, T<tags::wave>) {
-    termination_logic(node, call_point, s, ds, T<tags::novel>{});
+void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wave>) {
+    //    termination_logic(node, call_point, s, ds, dt, T<tags::novel>{});
+    // novel* START
+    times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
+				    times_t t = min_hood(CALL, ndt + node.nbr_lag());
+				    return (node.uid == m.from) && (counter(CALL)==1) ? 0 : t;
+				});
+
+    if (ds < timespace_threshold * (dt - period)) {
+	s = status::external;
+	return;
+    }
+    
+    bool terminating = s == status::terminated_output;
+    bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
+        return any_hood(CALL, nt) or terminating;
+    });
+    if (terminated) {
+        if (s == status::terminated_output) s = status::border_output;
+        if (s == status::internal) s = status::border;
+    }
+    // novel* END
+
+    /*
     real_t md = max_hood(CALL, nbr(CALL, ds), ds);
     if (md <= old(CALL, -INF, md)) {
         if (s == status::border_output) s = status::external_output;
         else s = status::external;
     }
+    */
 }
 //! @brief Export list for termination_logic.
-FUN_EXPORT termination_logic_t = export_list<bool, real_t>;
+    FUN_EXPORT termination_logic_t = export_list<bool, real_t, counter_t<>>;
+//    FUN_EXPORT termination_logic_t = export_list<bool, real_t>;    
 
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
@@ -310,12 +339,14 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, bool render) {
     message_log_type r = spawn(node, call_point, [&](message const& m){
         node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, 1, 1));
         double ds = monotonic_distance(CALL, m.from == node.uid);
+	/*
 	times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
 					times_t t = min_hood(CALL, ndt + node.nbr_lag());
 					return node.uid == m.from ? 0 : t;
 				    });
+	*/
         auto r = process(m, ds);
-        termination_logic(CALL, get<1>(r), ds, dt, T{});
+        termination_logic(CALL, get<1>(r), ds, m, T{});
         return r;
     }, std::forward<S>(key_set));
     // compute stats
@@ -367,13 +398,15 @@ MAIN() {
     common::option<message> m = get_message(CALL, node.storage(devices{}));
     // tests spherical processes with legacy termination
     //    spherical_test(CALL, m, INF, legacy{}, true);
-    //    spherical_test(CALL, m, INF, share{}, true);
-    spherical_test(CALL, m, INF, share{}, false);    
-    //    spherical_test(CALL, m, INF, novel{}, true);
-    spherical_test(CALL, m, INF, novel{}, true);    
-    //    spherical_test(CALL, m, INF, wave{}, true);
+    //    spherical_test(CALL, m, INF, share{}, false);    
+    spherical_test(CALL, m, INF, novel{}, false);
+    spherical_test(CALL, m, INF, wave{}, true);
     // spanning tree definition
+
+
     double ds = bis_distance(CALL, is_src, 1, 100);
+    //    double ds = flex_distance(CALL, is_src, 1, 100);
+
     device_t parent = get<1>(min_hood(CALL, make_tuple(nbr(CALL, ds), node.nbr_uid())));
     // routing sets along the tree
     set_t below = sp_collection(CALL, ds, set_t{node.uid}, set_t{}, [](set_t x, set_t const& y){
@@ -381,15 +414,13 @@ MAIN() {
         return x;
     });
     // test tree processes with legacy termination
-    /*
-    tree_test(CALL, m, parent, below, legacy{});
-    tree_test(CALL, m, parent, below, share{});
-    tree_test(CALL, m, parent, below, novel{});
-    tree_test(CALL, m, parent, below, wave{});
-    */
+    //    tree_test(CALL, m, parent, below, legacy{}, true);
+    //    tree_test(CALL, m, parent, below, share{}, true);
+    //    tree_test(CALL, m, parent, below, novel{});
+    //    tree_test(CALL, m, parent, below, wave{});
 
     // TODO remove
-    if (node.uid == 103)
+    if (node.uid == 279)
 	node.storage(node_color{}) = color();
 }
 //! @brief Exports for the main function.
