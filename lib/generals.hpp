@@ -128,14 +128,20 @@ namespace tags {
     struct avg_proc {};
 
 
-    //! @brief The movement speed of devices.
-    struct speed {};
+    //! @brief The variance of round timing in the network.
+    struct tvar {};
 
     //! @brief The number of hops in the network.
     struct hops {};
 
     //! @brief The density of devices.
     struct dens {};
+
+    //! @brief The movement speed of devices.
+    struct speed {};
+
+    //! @brief The average round interval of a device.
+    struct tavg {};
 
     //! @brief The number of devices.
     struct devices {};

@@ -47,14 +47,6 @@ using namespace component::tags;
 using namespace coordination::tags;
 
 
-//! @brief The randomised sequence of rounds for every node (about one every second, with 10% variance).
-using round_s = sequence::periodic<
-    distribution::interval_n<times_t, 0, 1>,
-    distribution::weibull_n<times_t, 10, 1, 10>,
-    distribution::constant_n<times_t, end+2>
->;
-
-
 //! @brief Maximum admissible value for a seed.
 constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_t>::max(), std::numeric_limits<intmax_t>::max());
 
@@ -63,27 +55,18 @@ template <intmax_t num, intmax_t den = 1>
 using n = distribution::constant_n<double, num, den>;
 
 //! @brief Shorthand for an constant input distribution.
-template <typename T>
-using i = distribution::constant_i<double, T>;
+template <typename T, typename R = double>
+using i = distribution::constant_i<R, T>;
 
-//! @brief Functor calculating X/(X+1.0).
-template <typename X>
-using func_ratio = functor::div<X, functor::add<n<1>, X>>;
-
-//! @brief Functor calculating area side from density and hops.
-using func_side = functor::mul<
-    func_ratio<functor::mul<i<dens>, n<2>>>,
-    functor::mul<i<hops>, n<comm*10000, 14142>>
+//! @brief The randomised sequence of rounds for every node (about one every second, with 10% variance).
+using round_s = sequence::periodic<
+    distribution::interval_n<times_t, 0, 1>,
+    distribution::weibull<i<tavg>, functor::mul<i<tvar>, i<tavg>>>,
+    distribution::constant_n<times_t, end + 5*period>
 >;
 
-//! @brief Functor calculating device number from density and hops.
-using func_dev = functor::cast<functor::add<functor::div<
-    functor::mul<functor::pow<func_side, n<2>>, i<dens>>,
-    n<31416*comm*comm, 10000>
->, n<1,2>>, size_t>;
-
 //! @brief The distribution of initial node positions (random in a given rectangle).
-using rectangle_d = distribution::rect<n<0>, n<0>, n<20>, func_side, func_side, n<20>>;
+using rectangle_d = distribution::rect<n<0>, n<0>, n<20>, i<side>, i<side>, n<20>>;
 
 
 //! @brief Aggregators for a given test.
@@ -110,7 +93,7 @@ using test_store_t = tuple_store<
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
     avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<func_dev>>
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<i<devices>>>
 >;
 
 //! @brief Overall options (aggregator, storage, functors) for given tests.
@@ -156,9 +139,10 @@ using row_plot_t = plot::join<
 
 //! @brief Overall plot document (one page for every variable).
 using plot_t = plot::join<
-    plot::filter<hops, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<dens, row_plot_t>>>,
-    plot::filter<dens, filter::equal<20>, plot::filter<speed, filter::equal<1, 10>, plot::split<hops, row_plot_t>>>,
-    plot::filter<hops, filter::equal<10>, plot::filter<dens, filter::equal<20>, plot::split<speed, row_plot_t>>>
+    plot::filter<dens, filter::equal<20>, plot::filter<hops, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<tvar, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<dens, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<dens, filter::equal<20>, plot::filter<speed, filter::equal<1, 10>, plot::split<hops, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<10>, plot::filter<dens, filter::equal<20>, plot::split<speed, row_plot_t>>>>
 >;
 
 
@@ -168,14 +152,16 @@ DECLARE_OPTIONS(list,
     synchronised<false>, // optimise for asynchronous networks
     program<coordination::main>,   // program to be run (refers to MAIN in process_management.hpp)
     exports<coordination::main_t>, // export type list (types used in messages)
+    retain<metric::retain<2>>, // retain time for messages
     round_schedule<round_s>, // the sequence generator for round events on nodes
     log_schedule<sequence::periodic_n<1, 0, 1, end>>, // the sequence generator for log events on the network
-    spawn_schedule<sequence::multiple<func_dev, n<0>>>, // the sequence generator of node creation events on the network
+    spawn_schedule<sequence::multiple<i<devices, size_t>, n<0>>>, // the sequence generator of node creation events on the network
     // the basic contents of the node storage
     tuple_store<
+        seed,                           uint_fast32_t,
         speed,                          double,
         devices,                        size_t,
-        side,                           double,
+        side,                           size_t,
         proc_data,                      std::vector<color>,
         sent_count,                     size_t,
         node_color,                     color,
@@ -198,13 +184,16 @@ DECLARE_OPTIONS(list,
     // data initialisation
     init<
         x,                  rectangle_d,
-        seed,               distribution::interval_n<uint_fast32_t, 0, seed_max>,
+        seed,               functor::cast<distribution::interval_n<double, 0, seed_max>, uint_fast32_t>,
         speed,              functor::mul<i<speed>, n<comm, period>>,
-        side,               func_side,
-        devices,            func_dev
+        side,               i<side>,
+        devices,            i<devices>,
+        tvar,               i<tvar>,
+        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period>>>
     >,
     // general parameters to use for plotting
     extra_info<
+        tvar,   double,
         dens,   int,
         hops,   int,
         speed,  double

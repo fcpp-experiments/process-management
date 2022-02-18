@@ -224,6 +224,7 @@ MAIN() {
     spherical_test(CALL, m, INF, novel{});
     spherical_test(CALL, m, INF, wave{});
 #endif
+#ifndef NOTREE
     // spanning tree definition
     double ds = bis_distance(CALL, is_src, 1, 100);
     //    double ds = flex_distance(CALL, is_src, 1, 100);
@@ -233,7 +234,6 @@ MAIN() {
         x.insert(y.begin(), y.end());
         return x;
     });
-#ifndef NOTREE
     // test tree processes with legacy termination
     tree_test(CALL, m, parent, below, legacy{});
     tree_test(CALL, m, parent, below, share{});
