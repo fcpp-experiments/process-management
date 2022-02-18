@@ -144,15 +144,22 @@ using lines_t = plot::join<
 template <typename... Ts>
 using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
 
-//! @brief Overall plot page.
-using plot_t = plot::split<common::type_sequence<dens, hops, speed>, plot::join<
+//! @brief Overall row of plots.
+using row_plot_t = plot::join<
     time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
     time_plot_t<lines_t<avg_proc, noaggr>>,
     time_plot_t<lines_t<avg_delay, noaggr>>,
     time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
     time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
     time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
->>;
+>;
+
+//! @brief Overall plot document (one page for every variable).
+using plot_t = plot::join<
+    plot::filter<hops, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<dens, row_plot_t>>>,
+    plot::filter<dens, filter::equal<20>, plot::filter<speed, filter::equal<1, 10>, plot::split<hops, row_plot_t>>>,
+    plot::filter<hops, filter::equal<10>, plot::filter<dens, filter::equal<20>, plot::split<speed, row_plot_t>>>
+>;
 
 
 //! @brief The general simulation options.
