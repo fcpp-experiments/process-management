@@ -21,7 +21,7 @@ int main() {
     // The list of initialisation values to be used for simulations.
     auto init_list = [&](std::string v){
         return batch::make_tagged_tuple_sequence(
-            batch::arithmetic<option::seed>(1, runs, 1), // 10 different random seeds
+            batch::arithmetic<option::seed>(0, runs-1, 1), // 10 different random seeds
             batch::arithmetic<option::tvar>(v == "tvar" ?  0 : 0.1, 0.5, 0.5), // 3 different temporal variances
             batch::arithmetic<option::dens>(v == "dens" ? 10 :  20,  30,  20), // 3 different densities
             batch::arithmetic<option::hops>(v == "hops" ?  5 :  10,  15,  10), // 3 different hop sizes

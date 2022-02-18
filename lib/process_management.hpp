@@ -83,78 +83,58 @@ FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 
 //! @brief Legacy termination logic (COORD19).
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, message const&, T<tags::legacy>) {
+void termination_logic(ARGS, status& s, message const&, T<tags::legacy>) {
      bool terminating = s == status::terminated_output;
      bool terminated = old(CALL, terminating, [&](bool ot){
         return any_hood(CALL, nbr(CALL, ot), ot) or terminating;
      });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-
     if (exiting) s = status::external;
     else if (terminating) s = status::internal_output;
 }
 //! @brief Legacy termination logic updated to use share (LMCS2020) instead of rep+nbr.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) {
-    /*
-    // todo REMOVE
-    if (s == status::terminated_output)
-	std::cout << node.uid << " TERMINATED" << std::endl;
-    */
+void termination_logic(ARGS, status& s, message const&, T<tags::share>) {
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-    /*
-    // todo REMOVE
-    if (exiting)
-	std::cout << node.uid << " EXITING" << std::endl;
-    */
     if (exiting) s = status::external;
     else if (terminating) s = status::internal_output;
 }
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::novel>) {
-    times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
-        times_t t = min_hood(CALL, ndt + node.nbr_lag());
-        return node.uid == m.from ? 0 : t;
-    });
+void termination_logic(ARGS, status& s, message const& m, T<tags::novel>) {
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
-    if (terminated or ds < timespace_threshold * (dt - period)) {
+    double ds, dt;
+    tie(ds, dt) = monotonic_bis_distance(CALL, m.from == node.uid);
+    bool slow = ds < timespace_threshold * (dt - period);
+    if (terminated or slow) {
         if (s == status::terminated_output) s = status::border_output;
         if (s == status::internal) s = status::border;
     }
 }
 //! @brief Wave-like termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t ds, message const& m, T<tags::wave>) {
-    times_t dt = nbr(CALL, INF, [&](field<times_t> ndt){
-        times_t t = min_hood(CALL, ndt + node.nbr_lag());
-        return node.uid == m.from and counter(CALL) == 1 ? 0 : t;
-    });
+void termination_logic(ARGS, status& s, message const& m, T<tags::wave>) {
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
-    if (terminated or ds < timespace_threshold * (dt - period)) {
+    double ds, dt;
+    tie(ds, dt) = monotonic_bis_distance(CALL, m.from == node.uid and old(CALL, true, false));
+    bool slow = ds < timespace_threshold * (dt - period);
+    if (terminated or slow) {
         if (s == status::terminated_output) s = status::border_output;
         if (s == status::internal) s = status::border;
     }
-    /*
-    real_t md = max_hood(CALL, nbr(CALL, ds), ds);
-    if (md <= old(CALL, -INF, md)) {
-        if (s == status::border_output) s = status::external_output;
-        else s = status::external;
-    }
-    */
 }
 //! @brief Export list for termination_logic.
-FUN_EXPORT termination_logic_t = export_list<bool, counter_t<>, real_t>;
+FUN_EXPORT termination_logic_t = export_list<bool, monotonic_bis_distance_t>;
 
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
@@ -164,25 +144,24 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, bool render) {
     node.storage(tags::proc_data{}).push_back(color(BLACK));
     // dispatches messages
     message_log_type r = spawn(node, call_point, [&](message const& m){
-        node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, 1, 1));
-        double ds = monotonic_distance(CALL, m.from == node.uid);
-        auto r = process(m, ds);
-        termination_logic(CALL, get<1>(r), ds, m, T{});
+        auto r = process(m);
+        termination_logic(CALL, get<1>(r), m, T{});
+        real_t key = get<1>(r) == status::external ? 0.5 : 1;
+        node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
         return r;
     }, std::forward<S>(key_set));
     // compute stats
     proc_stats(CALL, r, render, T{});
 }
 //! @brief Export list for spawn_profiler.
-FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, monotonic_distance_t, proc_stats_t>;
+FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, proc_stats_t>;
 
 
 //! @brief Makes test for spherical processes.
-GEN(T) void spherical_test(ARGS, common::option<message> const& m, real_t max_distance, T, bool render = false) { CODE
-    spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t ds){
-        status s = node.uid == m.to ? status::terminated_output :
-                   ds < max_distance ? status::internal : status::external;
-	return make_tuple(node.current_time(), s);
+GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+    spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
+        status s = node.uid == m.to ? status::terminated_output : status::internal;
+        return make_tuple(node.current_time(), s);
     }, m, render);
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
@@ -193,10 +172,11 @@ using set_t = std::unordered_set<device_t>;
 
 //! @brief Makes test for tree processes.
 GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, set_t const& below, T, bool render = false) { CODE
-    spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t){
-        bool inpath = below.count(m.from) + below.count(m.to) > 0;
+    spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m){
+        bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
+        bool dest_path = below.count(m.to) > 0;
         status s = node.uid == m.to ? status::terminated_output :
-                   inpath ? status::internal : status::external;
+                   source_path or dest_path ? status::internal : status::external;
         return make_tuple(node.current_time(), s);
     }, m, render);
 }
@@ -219,18 +199,16 @@ MAIN() {
     common::option<message> m = get_message(CALL, node.storage(devices{}));
 #ifndef NOSPHERE
     // tests spherical processes with legacy termination
-    spherical_test(CALL, m, INF, legacy{});
-    spherical_test(CALL, m, INF, share{});
-    spherical_test(CALL, m, INF, novel{});
-    spherical_test(CALL, m, INF, wave{});
+    spherical_test(CALL, m, legacy{});
+    spherical_test(CALL, m, share{});
+    spherical_test(CALL, m, novel{});
+    spherical_test(CALL, m, wave{});
 #endif
 #ifndef NOTREE
     // spanning tree definition
-    double ds = bis_distance(CALL, is_src, 1, 100);
-    //    double ds = flex_distance(CALL, is_src, 1, 100);
-    device_t parent = get<1>(min_hood(CALL, make_tuple(nbr(CALL, ds), node.nbr_uid())));
+    device_t parent = flex_parent(CALL, is_src, comm);
     // routing sets along the tree
-    set_t below = sp_collection(CALL, ds, set_t{node.uid}, set_t{}, [](set_t x, set_t const& y){
+    set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const& y){
         x.insert(y.begin(), y.end());
         return x;
     });
@@ -242,7 +220,7 @@ MAIN() {
 #endif
 }
 //! @brief Exports for the main function.
-struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, bis_distance_t, real_t, sp_collection_t<double, set_t>, tree_test_t> {};
+struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_test_t> {};
 
 
 } // coordination

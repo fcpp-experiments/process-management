@@ -172,15 +172,58 @@ namespace tags {
 } // tags
 
 
-//! @brief Distance estimation which can only decrease over time.
-FUN real_t monotonic_distance(ARGS, bool source) {
-    return nbr(node, call_point, INF, [&](field<real_t> nd){
-        real_t d = min_hood(CALL, nd + node.nbr_dist()); // inclusive
-        return source ? 0 : d;
+//! @brief BIS distance estimation which can only decrease over time.
+FUN tuple<real_t,real_t> monotonic_bis_distance(ARGS, bool source) {
+    return nbr(node, call_point, make_tuple(INF,INF), [&](field<tuple<real_t,real_t>> nx){
+        tuple<real_t,real_t> x = min_hood(CALL, make_tuple(node.nbr_dist(), node.nbr_lag()) + nx); // inclusive
+        if (source) x = {0,0};
+        return x;
     });
 }
 //! @brief Export list for monotonic_distance.
-FUN_EXPORT monotonic_distance_t = export_list<real_t>;
+FUN_EXPORT monotonic_bis_distance_t = export_list<tuple<real_t,real_t>>;
+
+
+//! @brief Computes stable parents through FLEX distance estimation.
+FUN device_t flex_parent(ARGS, bool source, real_t radius) {
+    constexpr real_t epsilon = 0.5;
+    constexpr real_t distortion = 0.1;
+    tuple<real_t, device_t> loc{source ? 0 : INF, node.uid};
+    return get<1>(nbr(CALL, loc, [&] (field<tuple<real_t, device_t>> x) {
+        field<real_t> dist = max(node.nbr_dist(), distortion*radius);
+        tuple<real_t, device_t> const& old_di = self(CALL, x);
+        real_t old_d = get<0>(old_di);
+        device_t old_i = get<1>(old_di);
+        field<real_t> nd = get<0>(x);
+        tuple<real_t, device_t> new_di = min_hood(CALL, make_tuple(nd + dist, node.nbr_uid()), loc);
+        real_t new_d = get<0>(new_di);
+        device_t new_i = get<1>(new_di);
+        tuple<real_t,real_t,real_t> slopeinfo = max_hood(CALL, make_tuple((old_d - nd)/dist, nd, dist), make_tuple(-INF, INF, 0));
+        if (old_d == new_d or new_d == 0 or
+            old_d > max(2*new_d, radius) or new_d > max(2*old_d, radius))
+            return make_tuple(new_d, new_i);
+        if (details::self(node.nbr_dist(), old_i) == INF or get<0>(details::self(x, old_i)) > old_d)
+            old_i = new_i;
+        if (get<0>(slopeinfo) > 1 + epsilon)
+            return make_tuple(get<1>(slopeinfo) + get<2>(slopeinfo) * (1 + epsilon), new_i);
+        if (get<0>(slopeinfo) < 1 - epsilon)
+            return make_tuple(get<1>(slopeinfo) + get<2>(slopeinfo) * (1 - epsilon), new_i);
+        return make_tuple(old_d, new_i);
+    }));
+}
+//! @brief Export list for flex_parent.
+FUN_EXPORT flex_parent_t = export_list<tuple<real_t, device_t>>;
+
+
+//! @brief Collects distributed data with a single-path strategy according to given parents.
+GEN(T,G,BOUND(G, T(T,T)))
+T parent_collection(ARGS, device_t parent, T const& value, G&& accumulate) { CODE
+    return nbr(CALL, T{}, [&](field<T> x){
+        return fold_hood(CALL, accumulate, mux(nbr(CALL, parent) == node.uid, x, T{}), value);
+    });
+}
+//! @brief Export list for parent_collection.
+GEN_EXPORT(T) parent_collection_t = export_list<T, device_t>;
 
 
 } // coordination
