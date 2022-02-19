@@ -139,10 +139,13 @@ using row_plot_t = plot::join<
 
 //! @brief Overall plot document (one page for every variable).
 using plot_t = plot::join<
-    plot::filter<dens, filter::equal<20>, plot::filter<hops, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<tvar, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<dens, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<dens, filter::equal<20>, plot::filter<speed, filter::equal<1, 10>, plot::split<hops, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<10>, plot::filter<dens, filter::equal<20>, plot::split<speed, row_plot_t>>>>
+    plot::filter<dens, filter::equal<10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<0>, plot::split<tvar, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<0>, plot::split<dens, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<dens, filter::equal<10>, plot::filter<speed, filter::equal<0>, plot::split<hops, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<15>, plot::filter<dens, filter::equal<10>, plot::split<speed, row_plot_t>>>>,
+    plot::filter<dens, filter::equal<10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<1, 10>, plot::split<tvar, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<1, 10>, plot::split<dens, row_plot_t>>>>,
+    plot::filter<tvar, filter::equal<1, 10>, plot::filter<dens, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<hops, row_plot_t>>>>
 >;
 
 

@@ -172,20 +172,19 @@ namespace tags {
 } // tags
 
 
-//! @brief BIS distance estimation which can only decrease over time.
-FUN tuple<real_t,real_t> monotonic_bis_distance(ARGS, bool source) {
-    return nbr(node, call_point, make_tuple(INF,INF), [&](field<tuple<real_t,real_t>> nx){
-        tuple<real_t,real_t> x = min_hood(CALL, make_tuple(node.nbr_dist(), node.nbr_lag()) + nx); // inclusive
-        if (source) x = {0,0};
-        return x;
+//! @brief Distance estimation which can only decrease over time using given metric field of relative distances.
+GEN(T) real_t monotonic_distance(ARGS, bool source, field<T> const& rd) { CODE
+    return nbr(CALL, INF, [&](field<real_t> nd){
+        real_t mind = min_hood(CALL, nd + rd); // inclusive
+        return source ? 0.0 : mind;
     });
 }
 //! @brief Export list for monotonic_distance.
-FUN_EXPORT monotonic_bis_distance_t = export_list<tuple<real_t,real_t>>;
+FUN_EXPORT monotonic_distance_t = export_list<real_t>;
 
 
 //! @brief Computes stable parents through FLEX distance estimation.
-FUN device_t flex_parent(ARGS, bool source, real_t radius) {
+FUN device_t flex_parent(ARGS, bool source, real_t radius) { CODE
     constexpr real_t epsilon = 0.5;
     constexpr real_t distortion = 0.1;
     tuple<real_t, device_t> loc{source ? 0 : INF, node.uid};
