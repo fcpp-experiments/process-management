@@ -72,21 +72,25 @@ using rectangle_d = distribution::rect<n<0>, n<0>, n<20>, i<side>, i<side>, n<20
 //! @brief Aggregators for a given test.
 template <template<class> class T, typename S>
 using test_aggr_t = aggregators<
+#ifdef ALLPLOTS
     max_proc<T<S>>,            aggregator::max<int>,
+    repeat_count<T<S>>,        aggregator::sum<size_t>,
+#endif
     tot_proc<T<S>>,            aggregator::sum<int>,
     first_delivery_tot<T<S>>,  aggregator::sum<times_t>,
-    delivery_count<T<S>>,      aggregator::sum<size_t>,
-    repeat_count<T<S>>,        aggregator::sum<size_t>
+    delivery_count<T<S>>,      aggregator::sum<size_t>
 >;
 
 //! @brief Storage for a given test.
 template <template<class> class T, typename S>
 using test_store_t = tuple_store<
+#ifdef ALLPLOTS
     max_proc<T<S>>,            int,
+    repeat_count<T<S>>,        size_t,
+#endif
     tot_proc<T<S>>,            int,
     first_delivery_tot<T<S>>,  times_t,
-    delivery_count<T<S>>,      size_t,
-    repeat_count<T<S>>,        size_t
+    delivery_count<T<S>>,      size_t
 >;
 
 //! @brief Functors for a given test.
@@ -129,12 +133,14 @@ using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
 
 //! @brief Overall row of plots.
 using row_plot_t = plot::join<
+#ifdef ALLPLOTS
     time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
-    time_plot_t<lines_t<avg_proc, noaggr>>,
-    time_plot_t<lines_t<avg_delay, noaggr>>,
     time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
+    time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>,
+#endif
     time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
-    time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>
+    time_plot_t<lines_t<avg_proc, noaggr>>,
+    time_plot_t<lines_t<avg_delay, noaggr>>
 >;
 
 //! @brief Overall plot document (one page for every variable).
@@ -175,9 +181,11 @@ DECLARE_OPTIONS(list,
         node_shape,                     shape
     >,
     // the basic tags and corresponding aggregators to be logged
+#ifdef ALLPLOTS
     aggregators<
         sent_count,         aggregator::sum<size_t>
     >,
+#endif
     // further options for each test
 #ifndef NOSPHERE
     test_option_t<spherical, legacy, share, novel, wave>,

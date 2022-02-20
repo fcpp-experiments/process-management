@@ -34,7 +34,6 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
     if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
-//    if (node.current_time() > 1 and node.current_time() < 25 and node.next_real() < 0.01) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
@@ -52,7 +51,9 @@ GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T) {
     using namespace tags;
     // stats on number of active processes
     int proc_num = node.storage(proc_data{}).size() - 1;
+#ifdef ALLPLOTS
     node.storage(max_proc<T>{}) = max(node.storage(max_proc<T>{}), proc_num);
+#endif
     node.storage(tot_proc<T>{}) += proc_num;
     // additional node rendering
     if (render) {
@@ -64,8 +65,11 @@ GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T) {
     // stats on delivery success
     old(node, call_point, message_log_type{}, [&](message_log_type m){
         for (auto const& x : nm) {
-            if (m.count(x.first)) node.storage(repeat_count<T>{}) += 1;
-            else {
+            if (m.count(x.first)) {
+#ifdef ALLPLOTS
+                node.storage(repeat_count<T>{}) += 1;
+#endif
+            } else {
                 node.storage(first_delivery_tot<T>{}) += x.second - x.first.time;
                 node.storage(delivery_count<T>{}) += 1;
                 m[x.first] = x.second;
@@ -191,9 +195,14 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
     // basic node rendering
+#ifdef NOTREE
+    bool is_src = false;
+#else
     bool is_src = node.uid == 0;
-    node.storage(node_shape{}) = is_src ? shape::cube : shape::sphere;
-    node.storage(node_size{}) = is_src ? 16 : 10;
+#endif
+    bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
+    node.storage(node_shape{}) = highlight ? shape::cube : shape::sphere;
+    node.storage(node_size{}) = highlight ? 16 : 10;
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
 #ifndef NOSPHERE
