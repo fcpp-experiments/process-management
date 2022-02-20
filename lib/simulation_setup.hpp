@@ -47,6 +47,47 @@ using namespace component::tags;
 using namespace coordination::tags;
 
 
+//! @brief Struct holding default values for simulation parameters.
+template <typename T>
+struct var_def_t;
+
+//! @brief Default tvar for simulations.
+template <>
+struct var_def_t<tvar> {
+    constexpr static size_t value = 10;
+};
+
+//! @brief Default dens for simulations.
+template <>
+struct var_def_t<dens> {
+    constexpr static size_t value = 10;
+};
+
+//! @brief Default hops for simulations.
+template <>
+struct var_def_t<hops> {
+#ifndef NOSPHERE
+    constexpr static size_t value = 20;
+#else
+    constexpr static size_t value = 10;
+#endif
+};
+
+//! @brief Default speed for simulations.
+template <>
+struct var_def_t<speed> {
+#ifndef NOTREE
+    constexpr static size_t value = 0;
+#else
+    constexpr static size_t value = 10;
+#endif
+};
+
+//! @brief Default values for simulation parameters.
+template <typename T>
+constexpr size_t var_def = var_def_t<T>::value;
+
+
 //! @brief Maximum admissible value for a seed.
 constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_t>::max(), std::numeric_limits<intmax_t>::max());
 
@@ -119,39 +160,56 @@ using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P
 template <template<class> class T, typename A>
 using lines_t = plot::join<
 #ifndef NOSPHERE
-    test_lines_t<T, A, spherical, legacy, share, novel, wave>,
+    test_lines_t<T, A, spherical, legacy, share, ispp, wispp>,
 #endif
 #ifndef NOTREE
-    test_lines_t<T, A, tree,      legacy, share, novel, wave>,
+    test_lines_t<T, A, tree,      legacy, share, ispp, wispp>,
 #endif
     plot::none
 >;
 
 //! @brief Time-based plot.
-template <typename... Ts>
-using time_plot_t = plot::split<plot::time, plot::join<Ts>...>;
+template <typename S, typename... Ts>
+using single_plot_t = plot::split<S, plot::join<Ts>...>;
 
 //! @brief Overall row of plots.
+template <typename S, size_t t0 = 0>
 using row_plot_t = plot::join<
 #ifdef ALLPLOTS
-    time_plot_t<lines_t<max_proc, aggregator::max<int>>>,
-    time_plot_t<plot::value<aggregator::sum<sent_count, false>>>,
-    time_plot_t<lines_t<repeat_count, aggregator::sum<size_t>>>,
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<max_proc, aggregator::max<int>>>>,
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, plot::value<aggregator::sum<sent_count, false>>>>,
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<repeat_count, aggregator::sum<size_t>>>>,
 #endif
-    time_plot_t<lines_t<delivery_count, aggregator::sum<size_t>>>,
-    time_plot_t<lines_t<avg_proc, noaggr>>,
-    time_plot_t<lines_t<avg_delay, noaggr>>
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<delivery_count, aggregator::sum<size_t>>>>,
+    single_plot_t<S, lines_t<avg_proc, noaggr>>,
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<avg_delay, noaggr>>>
 >;
+
+//! @brief Applies multiple filters (empty overload).
+template <typename P, typename... Ts>
+struct multi_filter {
+    using type = P;
+};
+
+//! @brief Applies multiple filters (active overload).
+template <typename P, typename T, typename... Ts>
+struct multi_filter<P,T,Ts...> {
+    using type = plot::filter<T, filter::equal<var_def<T>>, typename multi_filter<P,Ts...>::type>;
+};
+
+//! @brief Applies multiple filters (helper template).
+template <typename P, typename... Ts>
+using multi_filter_t = typename multi_filter<plot::split<common::type_sequence<Ts...>, P>, Ts...>::type;
 
 //! @brief Overall plot document (one page for every variable).
 using plot_t = plot::join<
-    plot::filter<dens, filter::equal<10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<0>, plot::split<tvar, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<0>, plot::split<dens, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<dens, filter::equal<10>, plot::filter<speed, filter::equal<0>, plot::split<hops, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<15>, plot::filter<dens, filter::equal<10>, plot::split<speed, row_plot_t>>>>,
-    plot::filter<dens, filter::equal<10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<1, 10>, plot::split<tvar, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<hops, filter::equal<15>, plot::filter<speed, filter::equal<1, 10>, plot::split<dens, row_plot_t>>>>,
-    plot::filter<tvar, filter::equal<1, 10>, plot::filter<dens, filter::equal<10>, plot::filter<speed, filter::equal<1, 10>, plot::split<hops, row_plot_t>>>>
+#ifndef GRAPHICS
+    multi_filter_t<row_plot_t<tvar, 50>,   dens, hops, speed>,
+    multi_filter_t<row_plot_t<dens, 50>,   tvar, hops, speed>,
+    multi_filter_t<row_plot_t<hops, 50>,   tvar, dens, speed>,
+    multi_filter_t<row_plot_t<speed, 50>,  tvar, dens, hops>,
+#endif
+    multi_filter_t<row_plot_t<plot::time>, tvar, dens, hops, speed>
 >;
 
 
@@ -188,27 +246,27 @@ DECLARE_OPTIONS(list,
 #endif
     // further options for each test
 #ifndef NOSPHERE
-    test_option_t<spherical, legacy, share, novel, wave>,
+    test_option_t<spherical, legacy, share, ispp, wispp>,
 #endif
 #ifndef NOTREE
-    test_option_t<tree,      legacy, share, novel, wave>,
+    test_option_t<tree,      legacy, share, ispp, wispp>,
 #endif
     // data initialisation
     init<
         x,                  rectangle_d,
         seed,               functor::cast<distribution::interval_n<double, 0, seed_max>, uint_fast32_t>,
         infospeed,          i<infospeed>,
-        speed,              i<speed>,
+        speed,              functor::div<i<speed>, n<100>>,
         side,               i<side>,
         devices,            i<devices>,
-        tvar,               i<tvar>,
-        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period>>>
+        tvar,               functor::div<i<tvar>, n<100>>,
+        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>
     >,
     // general parameters to use for plotting
     extra_info<
         tvar,   double,
-        dens,   int,
-        hops,   int,
+        dens,   double,
+        hops,   double,
         speed,  double
     >,
     plot_type<plot_t>, // the plot description to be used

@@ -82,11 +82,11 @@ namespace tags {
     //! @brief Legacy termination policy with share.
     struct share {};
 
-    //! @brief Novel termination policy.
-    struct novel {};
+    //! @brief Information Speed Process Propagation policy.
+    struct ispp {};
 
-    //! @brief Wave-like termination policy.
-    struct wave {};
+    //! @brief Wave-like ISPP policy.
+    struct wispp {};
 
 
     //! @brief Spherical process.

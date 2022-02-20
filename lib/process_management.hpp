@@ -106,7 +106,7 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) 
 }
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::novel>) {
+void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::ispp>) {
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
@@ -122,7 +122,7 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::nove
 }
 //! @brief Wave-like termination logic.
 template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::wave>) {
+void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::wispp>) {
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
@@ -144,7 +144,7 @@ FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render) {
     // clear up stats data
     node.storage(tags::proc_data{}).clear();
-    node.storage(tags::proc_data{}).push_back(color(BLACK));
+    node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
     // dispatches messages
     message_log_type r = spawn(node, call_point, [&](message const& m){
         auto r = process(m);
@@ -201,16 +201,16 @@ MAIN() {
     bool is_src = node.uid == 0;
 #endif
     bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
-    node.storage(node_shape{}) = highlight ? shape::cube : shape::sphere;
-    node.storage(node_size{}) = highlight ? 16 : 10;
+    node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
+    node.storage(node_size{}) = highlight ? 20 : 10;
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
 #ifndef NOSPHERE
     // tests spherical processes with legacy termination
     spherical_test(CALL, m, legacy{});
     spherical_test(CALL, m, share{});
-    spherical_test(CALL, m, novel{});
-    spherical_test(CALL, m, wave{}, true);
+    spherical_test(CALL, m, ispp{});
+    spherical_test(CALL, m, wispp{}, true);
 #endif
 #ifndef NOTREE
     // spanning tree definition
@@ -223,8 +223,8 @@ MAIN() {
     // test tree processes with legacy termination
     tree_test(CALL, m, parent, below, legacy{});
     tree_test(CALL, m, parent, below, share{});
-    tree_test(CALL, m, parent, below, novel{});
-    tree_test(CALL, m, parent, below, wave{}, true);
+    tree_test(CALL, m, parent, below, ispp{});
+    tree_test(CALL, m, parent, below, wispp{}, true);
 #endif
 }
 //! @brief Exports for the main function.
