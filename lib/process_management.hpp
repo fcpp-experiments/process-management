@@ -161,7 +161,7 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
-    }, m, 2.0, render);
+    }, m, node.storage(tags::infospeed{}), render);
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
 
@@ -189,7 +189,7 @@ MAIN() {
     using namespace tags;
     // random walk
     size_t l = node.storage(side{});
-    rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}), 1);
+    rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
     // basic node rendering
     bool is_src = node.uid == 0;
     node.storage(node_shape{}) = is_src ? shape::cube : shape::sphere;

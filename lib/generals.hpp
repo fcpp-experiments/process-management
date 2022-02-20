@@ -149,6 +149,9 @@ namespace tags {
     //! @brief The side of deployment area.
     struct side {};
 
+    //! @brief The estimated multi-path information speed factor.
+    struct infospeed {};
+
     //! @brief Temporary data of active processes.
     struct proc_data {};
 

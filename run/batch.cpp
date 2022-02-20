@@ -40,6 +40,11 @@ int main() {
                 double s = common::get<option::side>(x);
                 return d*s*s/(3.141592653589793*comm*comm) + 0.5;
             }),
+            batch::formula<option::infospeed>([](auto const& x) -> size_t {
+                double d = common::get<option::dens>(x);
+                double s = common::get<option::speed>(x);
+                return (0.08*d - 0.7) * s + 0.075*d*d - 1.6*d + 11;
+            }),
             batch::constant<option::plotter>(&p) // reference to the plotter object
         );
     };
