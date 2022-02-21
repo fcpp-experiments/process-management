@@ -24,6 +24,8 @@ else
         echo -e "    \033[1m./make.sh plots\033[0m                  produces plots through non-interactive batch runs"
         echo -e "    \033[1m./make.sh window\033[0m                 opens interactive windows for a spherical and tree scenario"
         echo
+        echo -e "the number of batch runs can be tweaked through constant \033[1mruns\033[0m in \033[1mbatch.cpp\033[0m"
+        echo
     fi
     fcpp/src/make.sh "$@"
 fi
