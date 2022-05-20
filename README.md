@@ -123,7 +123,7 @@ The possible targets are:
 - `batch` (produces plots) runs a batch of experiments of process management
 - `graphic` (with GUI, produces plots) runs a graphic process management experiment based on the provided parameters
 
-Running the above command, you should see output about building the executables and running them, graphical simulations should pop up (if there are any in the targets), PDF plots should be produces in the `plot/` directory (if any are produced by the targets), and the textual output will be saved in the `output/` directory.
+Running the above command, you should see output about building the executables and running them, graphical simulations should pop up (if there are any in the targets), PDF plots should be produced in the `plot/` directory (if any are produced by the targets), and the textual output will be saved in the `output/` directory.
 
 ### Graphical User Interface
 
