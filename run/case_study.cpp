@@ -6,6 +6,7 @@
  */
 
 #include "lib/case_study.hpp"
+#include "lib/case_study_setup.hpp"
 
 using namespace fcpp;
 
