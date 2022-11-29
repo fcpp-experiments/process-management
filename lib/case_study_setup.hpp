@@ -51,13 +51,13 @@ using namespace coordination::tags;
 template <typename T>
 struct var_def_t;
 
-//! @brief Default tvar for simulations.
+//! @brief Default tvar for case study.
 template <>
 struct var_def_t<tvar> {
     constexpr static size_t value = 10;
 };
 
-//! @brief Default dens for simulations.
+//! @brief Default dens for case study.
 template <>
 struct var_def_t<dens> {
     constexpr static size_t value = 10;
@@ -66,21 +66,13 @@ struct var_def_t<dens> {
 //! @brief Default hops for simulations.
 template <>
 struct var_def_t<hops> {
-#ifndef NOSPHERE
     constexpr static size_t value = 20;
-#else
-    constexpr static size_t value = 10;
-#endif
 };
 
-//! @brief Default speed for simulations.
+//! @brief Default speed for case study.
 template <>
 struct var_def_t<speed> {
-#ifndef NOTREE
     constexpr static size_t value = 0;
-#else
-    constexpr static size_t value = 10;
-#endif
 };
 
 //! @brief Default values for simulation parameters.
