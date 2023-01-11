@@ -22,10 +22,13 @@ namespace fcpp {
 namespace coordination {
 
 
-//! @brief Phase of Case Study
-enum class phase {
-    DISCO,  // discovery
-    COMM    // communicate
+//! @brief Status of devices
+enum class devstatus {
+    IDLE,    // nothing interesting
+    DISCO,   // discovery of service
+    OFFER,   // offer of service
+    SERVED,  // being served
+    SERVING  // serving
 };
 
 //! @brief Length of a round
@@ -166,8 +169,8 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool
 FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, proc_stats_t>;
 
 
-//! @brief Makes test for spherical processes.
-GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+//! @brief Process that does a spherical broadcast of a service request.
+GEN(T) void spherical_broadcast(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
@@ -201,7 +204,7 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
-    old(CALL, phase::DISCO, [&](phase ph){
+    old(CALL, devstatus::IDLE, [&](devstatus ph){
        	// basic node rendering
        	bool is_src = false;
        	bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
@@ -210,7 +213,9 @@ MAIN() {
        	// random message with 1% probability during time [10..50]
        	common::option<message> m = get_message(CALL, node.storage(devices{}));
 
-       	if (ph == phase::DISCO) {
+	if (ph == devstatus::IDLE) {
+	    spherical_broadcast(CALL, m, legacy{});
+       	} if (ph == devstatus::DISCO) {
        	    // tests spherical processes with legacy termination
        	    spherical_test(CALL, m, legacy{});
        	    spherical_test(CALL, m, share{});
@@ -235,7 +240,7 @@ MAIN() {
     });
 }
 //! @brief Exports for the main function.
-    struct main_t : public export_list<rectangle_walk_t<3>, phase, spherical_test_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_test_t> {};
+    struct main_t : public export_list<rectangle_walk_t<3>, devstatus, spherical_test_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_test_t> {};
 
 
 } // coordination
