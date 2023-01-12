@@ -195,6 +195,31 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, s
 //! @brief Exports for the main function.
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
 
+//! @brief Manages behavior of devices with an automaton.
+FUN void device_automaton(ARGS, devstatus& stat) {
+    switch (stat) {
+        case devstatus::IDLE:
+        {
+            // generate (random) request
+            bool newreq;
+
+            if (newreq)
+                stat = devstatus::DISCO;
+            break;
+        }
+        case devstatus::DISCO:
+            break;
+        case devstatus::SERVED:
+            break;
+        case devstatus::OFFER:
+            break;
+        case devstatus::SERVING:
+            break;
+        default:
+            break;
+    }
+}
+FUN_EXPORT device_automaton_t = common::export_list<>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -217,10 +242,10 @@ MAIN() {
 	    spherical_broadcast(CALL, m, legacy{});
        	} if (ph == devstatus::DISCO) {
        	    // tests spherical processes with legacy termination
-       	    spherical_test(CALL, m, legacy{});
-       	    spherical_test(CALL, m, share{});
-       	    spherical_test(CALL, m, ispp{});
-       	    spherical_test(CALL, m, wispp{}, true);
+       	    // spherical_test(CALL, m, legacy{});
+       	    // spherical_test(CALL, m, share{});
+       	    // spherical_test(CALL, m, ispp{});
+       	    // spherical_test(CALL, m, wispp{}, true);
        	} else {
        	    // spanning tree definition
        	    device_t parent = flex_parent(CALL, is_src, comm);
