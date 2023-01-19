@@ -13,6 +13,9 @@
 #include "lib/generals.hpp"
 
 
+#include <vector>
+#include <string>
+
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
@@ -170,21 +173,21 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_
 
 
 //! @brief Process that does a spherical broadcast of a service request.
-GEN(T) void spherical_broadcast(ARGS, common::option<message> const& m, bool render = false) { CODE
+GEN(T) void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
     }, m, node.storage(tags::infospeed{}), render);
 }
-FUN_EXPORT spherical_broadcast_t = export_list<spawn_profiler_t>;
+FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
 
 //! @brief The type for a set of devices.
 using set_t = std::unordered_set<device_t>;
 
 //! @brief Makes test for tree processes.
-GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, set_t const& below, T, bool render = false) { CODE
-    spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m){
+GEN(T) void tree_service(ARGS, common::option<message> const& m, device_t parent, set_t const& below, bool render = false) { CODE
+    spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const& m){
         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
         bool dest_path = below.count(m.to) > 0;
         status s = node.uid == m.to ? status::terminated_output :
@@ -193,7 +196,7 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, s
     }, m, 0.9, render);
 }
 //! @brief Exports for the main function.
-FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
+FUN_EXPORT tree_service_t = export_list<spawn_profiler_t>;
 
 //! @brief Manages behavior of devices with an automaton.
 FUN void device_automaton(ARGS, devstatus& stat) {
@@ -205,7 +208,21 @@ FUN void device_automaton(ARGS, devstatus& stat) {
 
             if (!m.empty()) stat = devstatus::DISCO;
 
-    	    spherical_broadcast(CALL, m);
+    	    spherical_discovery(CALL, m);
+
+            // spanning tree definition
+            device_t parent = flex_parent(CALL, false, comm);
+            // routing sets along the tree
+            set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
+                                            {
+       									       x.insert(y.begin(), y.end());
+       									       return x; });
+
+            tree_service(CALL, m, parent, below);
+
+            vector<string> msg;
+
+            
 
             break;
         }
@@ -221,7 +238,7 @@ FUN void device_automaton(ARGS, devstatus& stat) {
             break;
     }
 }
-FUN_EXPORT device_automaton_t = common::export_list<spherical_broadcast_t>;
+FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -253,25 +270,18 @@ MAIN() {
         }
         else
         {
-            // spanning tree definition
-            device_t parent = flex_parent(CALL, is_src, comm);
-            // routing sets along the tree
-            set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
-                                            {
-       									       x.insert(y.begin(), y.end());
-       									       return x; });
             // test tree processes with legacy termination
-            tree_test(CALL, m, parent, below, legacy{});
-            tree_test(CALL, m, parent, below, share{});
-            tree_test(CALL, m, parent, below, ispp{});
-            tree_test(CALL, m, parent, below, wispp{}, true);
+            // tree_test(CALL, m, parent, below, legacy{});
+            // tree_test(CALL, m, parent, below, share{});
+            // tree_test(CALL, m, parent, below, ispp{});
+            // tree_test(CALL, m, parent, below, wispp{}, true);
         }
 
     return ph;
     });
 }
 //! @brief Exports for the main function.
-    struct main_t : public export_list<rectangle_walk_t<3>, devstatus, spherical_broadcast_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_test_t> {};
+    struct main_t : public export_list<rectangle_walk_t<3>, devstatus, spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t> {};
 
 
 } // coordination
