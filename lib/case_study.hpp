@@ -38,7 +38,7 @@ constexpr size_t period = 1;
 constexpr size_t comm = 100;
 
 
-//! @brief Possibly generates a message, given the number of devices and the experiment tag.
+//! @brief Possibly generates a message, given the number of devices.
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
@@ -170,13 +170,13 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_
 
 
 //! @brief Process that does a spherical broadcast of a service request.
-GEN(T) void spherical_broadcast(ARGS, common::option<message> const& m, T, bool render = false) { CODE
-    spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
+GEN(T) void spherical_broadcast(ARGS, common::option<message> const& m, bool render = false) { CODE
+    spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
     }, m, node.storage(tags::infospeed{}), render);
 }
-FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
+FUN_EXPORT spherical_broadcast_t = export_list<spawn_profiler_t>;
 
 
 //! @brief The type for a set of devices.
@@ -201,10 +201,12 @@ FUN void device_automaton(ARGS, devstatus& stat) {
         case devstatus::IDLE:
         {
             // generate (random) request
-            bool newreq;
+            common::option<message> m = get_message(CALL, node.storage(tags::devices{}));
 
-            if (newreq)
-                stat = devstatus::DISCO;
+            if (!m.empty()) stat = devstatus::DISCO;
+
+    	    spherical_broadcast(CALL, m);
+
             break;
         }
         case devstatus::DISCO:
@@ -219,7 +221,7 @@ FUN void device_automaton(ARGS, devstatus& stat) {
             break;
     }
 }
-FUN_EXPORT device_automaton_t = common::export_list<>;
+FUN_EXPORT device_automaton_t = common::export_list<spherical_broadcast_t>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -236,36 +238,40 @@ MAIN() {
        	node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
        	node.storage(node_size{}) = highlight ? 20 : 10;
        	// random message with 1% probability during time [10..50]
-       	common::option<message> m = get_message(CALL, node.storage(devices{}));
-
-	if (ph == devstatus::IDLE) {
-	    spherical_broadcast(CALL, m, legacy{});
-       	} if (ph == devstatus::DISCO) {
-       	    // tests spherical processes with legacy termination
-       	    // spherical_test(CALL, m, legacy{});
-       	    // spherical_test(CALL, m, share{});
-       	    // spherical_test(CALL, m, ispp{});
-       	    // spherical_test(CALL, m, wispp{}, true);
-       	} else {
-       	    // spanning tree definition
-       	    device_t parent = flex_parent(CALL, is_src, comm);
-       	    // routing sets along the tree
-       	    set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const& y){
+        common::option<message> m = get_message(CALL, node.storage(tags::devices{}));
+       	
+        if (ph == devstatus::IDLE)
+        {
+        }
+        if (ph == devstatus::DISCO)
+        {
+            // tests spherical processes with legacy termination
+            // spherical_test(CALL, m, legacy{});
+            // spherical_test(CALL, m, share{});
+            // spherical_test(CALL, m, ispp{});
+            // spherical_test(CALL, m, wispp{}, true);
+        }
+        else
+        {
+            // spanning tree definition
+            device_t parent = flex_parent(CALL, is_src, comm);
+            // routing sets along the tree
+            set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
+                                            {
        									       x.insert(y.begin(), y.end());
-       									       return x;
-       									   });
-       	    // test tree processes with legacy termination
-       	    tree_test(CALL, m, parent, below, legacy{});
-       	    tree_test(CALL, m, parent, below, share{});
-       	    tree_test(CALL, m, parent, below, ispp{});
-       	    tree_test(CALL, m, parent, below, wispp{}, true);
-       	}
+       									       return x; });
+            // test tree processes with legacy termination
+            tree_test(CALL, m, parent, below, legacy{});
+            tree_test(CALL, m, parent, below, share{});
+            tree_test(CALL, m, parent, below, ispp{});
+            tree_test(CALL, m, parent, below, wispp{}, true);
+        }
 
-	return ph;
+    return ph;
     });
 }
 //! @brief Exports for the main function.
-    struct main_t : public export_list<rectangle_walk_t<3>, devstatus, spherical_test_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_test_t> {};
+    struct main_t : public export_list<rectangle_walk_t<3>, devstatus, spherical_broadcast_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_test_t> {};
 
 
 } // coordination
