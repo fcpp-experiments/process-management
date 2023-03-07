@@ -94,6 +94,9 @@ namespace fcpp {
 namespace coordination {
 
 namespace tags {
+    //! @brief XC processes.
+    struct xc {};
+
     //! @brief Legacy termination policy.
     struct legacy {};
 
