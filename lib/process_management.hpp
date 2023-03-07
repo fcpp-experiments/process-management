@@ -28,12 +28,13 @@ spawn(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... x
     return spawn(node, call_point, [&](K const& k, auto const&... params){
         return nbr(node, call_point, field<bool>(false), [&](field<bool> n){
             bool b = false;
+            R ret;
             field<bool> fb = false;
             if (any_hood(node, call_point, n) or key_set.count(k) > 0) {
-                fb = process(k, params...);
-                b = any_hood(node, call_point, fb) or other(fb);
+                tie(ret, fb) = process(k, params...);
+                b = coordination::any_hood(node, call_point, fb) or other(fb);
             }
-            return make_tuple(b, fb);
+            return make_tuple(make_tuple(ret, b), fb);
         });
     }, std::forward<S>(key_set), xs...);
 }
