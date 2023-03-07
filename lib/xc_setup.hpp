@@ -160,10 +160,7 @@ using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P
 template <template<class> class T, typename A>
 using lines_t = plot::join<
 #ifndef NOSPHERE
-    test_lines_t<T, A, spherical, legacy, share, ispp, wispp>,
-#endif
-#ifndef NOTREE
-    test_lines_t<T, A, tree,      legacy, share, ispp, wispp>,
+    test_lines_t<T, A, spherical, xc>,
 #endif
     plot::none
 >;
@@ -246,10 +243,7 @@ DECLARE_OPTIONS(list,
 #endif
     // further options for each test
 #ifndef NOSPHERE
-    test_option_t<spherical, legacy, share, ispp, wispp>,
-#endif
-#ifndef NOTREE
-    test_option_t<tree,      legacy, share, ispp, wispp>,
+    test_option_t<spherical, xc>,
 #endif
     // data initialisation
     init<
