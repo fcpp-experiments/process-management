@@ -21,24 +21,6 @@
  */
 namespace fcpp {
 
-//! @brief Handles a process, spawning instances of it for every key in the `key_set` and passing general arguments `xs` (overload with field<bool> status).
-template <typename node_t, typename G, typename S, typename... Ts, typename K = typename std::decay_t<S>::value_type, typename T = std::decay_t<std::result_of_t<G(K const&, Ts const&...)>>, typename R = std::decay_t<tuple_element_t<0,T>>, typename B = std::decay_t<tuple_element_t<1,T>>>
-std::enable_if_t<std::is_same<B,field<bool>>::value, std::unordered_map<K, R>>
-spawn(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... xs) {
-    return spawn(node, call_point, [&](K const& k, auto const&... params){
-        return nbr(node, call_point, field<bool>(false), [&](field<bool> n){
-            bool b = false;
-            R ret;
-            field<bool> fb = false;
-            if (any_hood(node, call_point, n) or key_set.count(k) > 0) {
-                tie(ret, fb) = process(k, params...);
-                b = coordination::any_hood(node, call_point, fb) or other(fb);
-            }
-            return make_tuple(make_tuple(ret, b), fb);
-        });
-    }, std::forward<S>(key_set), xs...);
-}
-
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 

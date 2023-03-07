@@ -28,7 +28,16 @@ xcspawn(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&...
             bool b = false;
             R ret;
             field<bool> fb = false;
-            if (coordination::any_hood(node, call_point, n) or key_set.count(k) > 0) {
+
+            bool found=false;
+            for (auto it = key_set.cbegin(); it < key_set.cend(); it++) {
+                if (*it == k) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (coordination::any_hood(node, call_point, n) or found) {
                 tie(ret, fb) = process(k, params...);
                 b = coordination::any_hood(node, call_point, fb) or other(fb);
             }
@@ -132,7 +141,7 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool
     proc_stats(CALL, r, render, T{});
 }
 //! @brief Export list for spawn_profiler.
-FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t>;
+FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, field<bool>>;
 
 
 //! @brief Makes test for spherical processes.
@@ -154,7 +163,7 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         return make_tuple(true, fdslow);
     }, m, node.storage(tags::infospeed{}), render);
 }
-FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t>;
+FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool>;
 
 //! @brief Main case study function.
 MAIN() {
