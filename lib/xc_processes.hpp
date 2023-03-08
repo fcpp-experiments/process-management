@@ -12,7 +12,6 @@
 #include "lib/component/calculus.hpp"
 #include "lib/generals.hpp"
 
-
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
@@ -132,7 +131,6 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool
 //! @brief Export list for spawn_profiler.
 FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, field<bool>>;
 
-
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
@@ -142,11 +140,13 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         double dt = monotonic_distance(CALL, source, node.nbr_lag());
 
         field<real_t> fdds = nbr(CALL, ds);
+        //field<real_t> fddt = nbr(CALL, dt);
         field<real_t> fddt = dt + period - node.nbr_lag();
 
-        // TODO DUMMY to generate field of bool
         field<bool> fdnslow = (fdds >= v * comm / period * (fddt - node.nbr_lag()));
         fdnslow = mod_other(CALL, fdnslow, true);
+        if (node.uid == m.to)
+            fdnslow = mod_self(CALL, fdnslow, false);
 
         //status s = node.uid == m.to ? status::terminated_output : status::internal;
         // TODO ****check
@@ -164,7 +164,9 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
-    bool is_src = false;
+    // TODO should be opposite
+    //bool is_src = false;
+    bool is_src = node.uid == 0;
 
     bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
     node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
@@ -172,7 +174,7 @@ MAIN() {
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
 
-    spherical_test(CALL, m, xc{});
+    spherical_test(CALL, m, xc{}, true);
 }
 //! @brief Exports for the main function.
 struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, flex_parent_t, real_t> {};
