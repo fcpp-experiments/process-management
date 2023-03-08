@@ -5,8 +5,8 @@
  * @brief Simulation setup for the process management case study.
  */
 
-#ifndef FCPP_SIMULATION_SETUP_H_
-#define FCPP_SIMULATION_SETUP_H_
+#ifndef FCPP_XC_SETUP_H_
+#define FCPP_XC_SETUP_H_
 
 #include "lib/fcpp.hpp"
 #include "lib/generals.hpp"
