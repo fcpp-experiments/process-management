@@ -134,8 +134,7 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, 
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
-        bool source = m.from == node.uid;
-        // and old(CALL, true, false);
+        bool source = m.from == node.uid and old(CALL, true, false);
         double ds = monotonic_distance(CALL, source, node.nbr_dist());
         double dt = monotonic_distance(CALL, source, node.nbr_lag());
 
@@ -148,10 +147,8 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         if (node.uid == m.to)
             fdnslow = mod_self(CALL, fdnslow, false);
 
-        //status s = node.uid == m.to ? status::terminated_output : status::internal;
-        // TODO ****check
         return make_tuple(node.current_time(), fdnslow);
-        //return make_tuple(true, fdslow);
+
     }, m, node.storage(tags::infospeed{}), render);
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool>;
