@@ -6,7 +6,9 @@
  */
 
 #include "lib/xc_processes.hpp"
+// TODO
 #include "lib/xc_setup.hpp"
+//#include "lib/simulation_setup.hpp"
 
 using namespace fcpp;
 
@@ -44,6 +46,6 @@ int main() {
     }
     // Plot simulation results.
     std::cout << "*/\n";
-    std::cout << plot::file("xcgraphic", p.build());
+    std::cout << plot::file("graphic", p.build());
     return 0;
 }
