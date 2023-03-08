@@ -4,11 +4,10 @@
  * @file graphic.cpp
  * @brief Runs a single execution of the message dispatch case study with a graphical user interface.
  */
+#include <iostream>
 
 #include "lib/xc_processes.hpp"
-// TODO
 #include "lib/xc_setup.hpp"
-//#include "lib/simulation_setup.hpp"
 
 using namespace fcpp;
 
@@ -23,6 +22,7 @@ int main() {
     int side = hops * (2*dens)/(2*dens+1.0) * comm / sqrt(2.0) + 0.5;
     int devices = dens*side*side/(3.141592653589793*comm*comm) + 0.5;
     double infospeed = (0.08*dens - 0.7) * speed * 0.01 + 0.075*dens*dens - 1.6*dens + 11;
+    std::cout << "IS: " << infospeed << std::endl;
     {
         // The network object type (interactive simulator with given options).
         using net_t = component::interactive_simulator<option::list>::net;
