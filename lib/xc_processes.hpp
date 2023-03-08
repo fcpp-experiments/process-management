@@ -70,7 +70,7 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
 
 
 //! @brief Result type of spawn calls dispatching messages.
-// TODO ****check
+// TODO ****check --> should be size_t
 using message_log_type = std::unordered_map<message, double>;
 //using message_log_type = std::unordered_map<message, bool>;
 
@@ -136,7 +136,8 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, 
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
-        bool source = m.from == node.uid and old(CALL, true, false);
+        bool source = m.from == node.uid;
+        // and old(CALL, true, false);
         double ds = monotonic_distance(CALL, source, node.nbr_dist());
         double dt = monotonic_distance(CALL, source, node.nbr_lag());
 
@@ -144,11 +145,12 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         field<real_t> fddt = dt + period - node.nbr_lag();
 
         // TODO DUMMY to generate field of bool
-        field<bool> fdslow = (fdds < v * comm / period * (fddt - node.nbr_lag()));
+        field<bool> fdnslow = (fdds >= v * comm / period * (fddt - node.nbr_lag()));
+        fdnslow = mod_other(CALL, fdnslow, true);
 
         //status s = node.uid == m.to ? status::terminated_output : status::internal;
         // TODO ****check
-        return make_tuple(node.current_time(), !fdslow);
+        return make_tuple(node.current_time(), fdnslow);
         //return make_tuple(true, fdslow);
     }, m, node.storage(tags::infospeed{}), render);
 }
@@ -162,7 +164,7 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
-    bool is_src = node.uid == 0;
+    bool is_src = false;
 
     bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
     node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
