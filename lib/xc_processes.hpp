@@ -170,12 +170,17 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         if (dest) {
             fdwav = field<bool>(false);
         } else if (rnd == 1) {
-            fdwav = field<bool>(true);
-        } else if (rnd == 2) {
+            //fdwav = field<bool>(true);
             fdwav = field<bool>(false);
             fdwav = mod_self(CALL, fdwav, true);
-        } else {
-            fdwav = field<bool>(false);
+            fdwav = mod_other(CALL, fdwav, true);
+        } 
+        // else if (rnd == 2) {
+        //      fdwav = field<bool>(false);
+        //      fdwav = mod_self(CALL, fdwav, true);
+        // }
+        else {
+             fdwav = field<bool>(false);
         }
 
         return make_tuple(node.current_time(), fdwav);
