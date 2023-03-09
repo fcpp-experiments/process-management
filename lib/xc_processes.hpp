@@ -8,6 +8,8 @@
 #ifndef FCPP_XC_PROCESSES_H_
 #define FCPP_XC_PROCESSES_H_
 
+#include <iostream>
+
 #include "lib/common/option.hpp"
 #include "lib/component/calculus.hpp"
 #include "lib/generals.hpp"
@@ -133,6 +135,7 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, 
 
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+    #ifdef ALG_INFOSPEED
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
         bool source = m.from == node.uid and old(CALL, true, false);
         double ds = monotonic_distance(CALL, source, node.nbr_dist());
@@ -150,8 +153,37 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         return make_tuple(node.current_time(), fdnslow);
 
     }, m, node.storage(tags::infospeed{}), render);
+    #else
+    spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
+        bool source = m.from == node.uid;
+        double dt = monotonic_distance(CALL, source, node.nbr_lag());
+        field<real_t> fddt = nbr(CALL, dt);
+
+        field<bool> fdwav;
+        
+        fdwav = (fddt >= dt);
+        fdwav = mod_self(CALL, fdwav, false);
+
+        bool dest = m.to == node.uid;
+        int rnd = counter(CALL);
+
+        if (dest) {
+            fdwav = field<bool>(false);
+        } else if (rnd == 1) {
+            fdwav = field<bool>(true);
+        } else if (rnd == 2) {
+            fdwav = field<bool>(false);
+            fdwav = mod_self(CALL, fdwav, true);
+        } else {
+            fdwav = field<bool>(false);
+        }
+
+        return make_tuple(node.current_time(), fdwav);
+
+    }, m, node.storage(tags::infospeed{}), render);
+    #endif
 }
-FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool>;
+FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -161,9 +193,8 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
-    // TODO should be opposite
-    //bool is_src = false;
-    bool is_src = node.uid == 0;
+    bool is_src = false;
+    //bool is_src = node.uid == 0;
 
     bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
     node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
