@@ -13,9 +13,6 @@
 #include "lib/generals.hpp"
 
 
-#include <vector>
-#include <string>
-
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
@@ -219,10 +216,6 @@ FUN void device_automaton(ARGS, devstatus& stat) {
        									       return x; });
 
             tree_service(CALL, m, parent, below);
-
-            vector<string> msg;
-
-            
 
             break;
         }
