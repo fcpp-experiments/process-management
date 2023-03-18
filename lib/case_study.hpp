@@ -12,7 +12,6 @@
 #include "lib/component/calculus.hpp"
 #include "lib/generals.hpp"
 
-
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
@@ -20,7 +19,6 @@ namespace fcpp {
 
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
-
 
 //! @brief Status of devices
 enum class devstatus {
@@ -37,13 +35,15 @@ constexpr size_t period = 1;
 //! @brief Communication radius.
 constexpr size_t comm = 100;
 
+//! @brief Number of service types
+constexpr size_t NUM_SVC_TYPES = 5;
 
-//! @brief Possibly generates a message, given the number of devices.
-FUN common::option<message> get_message(ARGS, size_t devices) {
+//! @brief Possibly generates a discovery message, given the number of devices.
+FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [1..50]
     if (node.uid == devices-1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
-        m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
+        m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(NUM_SVC_TYPES));
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -170,7 +170,6 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_
 
 
 //! @brief Process that does a spherical broadcast of a service request.
-//GEN(T) void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
 FUN void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
@@ -202,7 +201,7 @@ FUN void device_automaton(ARGS, devstatus& stat) {
         case devstatus::IDLE:
         {
            	// random message with 1% probability during time [1..50]
-            common::option<message> m = get_message(CALL, node.storage(tags::devices{}));
+            common::option<message> m = get_disco_message(CALL, node.storage(tags::devices{}));
 
             if (!m.empty()) stat = devstatus::DISCO;
 

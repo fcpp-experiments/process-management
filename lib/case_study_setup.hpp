@@ -37,7 +37,6 @@ constexpr size_t dim = 3;
 //! @brief End of simulated time.
 constexpr size_t end = 50;
 
-
 //! @brief Namespace for component options.
 namespace option {
 
@@ -86,6 +85,7 @@ constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_
 //! @brief Shorthand for a constant numeric distribution.
 template <intmax_t num, intmax_t den = 1>
 using n = distribution::constant_n<double, num, den>;
+//using nu = distribution::uniform_n<double, num, den>;
 
 //! @brief Shorthand for an constant input distribution.
 template <typename T, typename R = double>
@@ -229,6 +229,7 @@ DECLARE_OPTIONS(list,
         right_color,                    color,
         node_size,                      double,
         node_shape,                     shape
+        ,offered_svc,                    size_t
     >,
     // the basic tags and corresponding aggregators to be logged
 #ifdef ALLPLOTS
@@ -252,7 +253,8 @@ DECLARE_OPTIONS(list,
         side,               i<side>,
         devices,            i<devices>,
         tvar,               functor::div<i<tvar>, n<100>>,
-        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>
+        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>,
+        offered_svc,        n<5>
     >,
     // general parameters to use for plotting
     extra_info<

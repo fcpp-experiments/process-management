@@ -12,6 +12,12 @@
 #include "lib/coordination.hpp"
 #include "lib/data.hpp"
 
+//! @brief Types of messages
+enum class msgtype {
+    NONE,  // irrelevant
+    DISCO, // service discovery message
+    OFFER  // offer of service message
+};
 
 //! @brief Struct representing a message.
 struct message {
@@ -23,12 +29,21 @@ struct message {
     fcpp::times_t time;
     //! @brief Data content.
     fcpp::real_t data;
+    //! @brief Message type.
+    msgtype type;
+    //! @brief Service type.
+    size_t svc_type;
 
     //! @brief Empty constructor.
     message() = default;
 
+    //! @brief Member constructor for messages with NONE type.
+    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time, fcpp::real_t data) :
+        from(from), to(to), time(time), data(data), type(msgtype::NONE), svc_type(0) {}
+
     //! @brief Member constructor.
-    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time, fcpp::real_t data) : from(from), to(to), time(time), data(data) {}
+    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time, fcpp::real_t data, msgtype type, size_t svc_type) : 
+        from(from), to(to), time(time), data(data), type(type), svc_type(svc_type) {}
 
     //! @brief Equality operator.
     bool operator==(message const& m) const {
@@ -172,6 +187,9 @@ namespace tags {
 
     //! @brief Shape of the current node.
     struct node_shape {};
+
+    //! @brief Service(s) offered by the current node.
+    struct offered_svc {};
 } // tags
 
 
