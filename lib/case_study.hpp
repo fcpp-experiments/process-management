@@ -41,8 +41,8 @@ constexpr size_t comm = 100;
 //! @brief Possibly generates a message, given the number of devices.
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
-    // random message with 1% probability during time [10..50]
-    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    // random message with 1% probability during time [1..50]
+    if (node.uid == devices-1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
@@ -170,7 +170,8 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_
 
 
 //! @brief Process that does a spherical broadcast of a service request.
-GEN(T) void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
+//GEN(T) void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
+FUN void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
@@ -183,7 +184,7 @@ FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 using set_t = std::unordered_set<device_t>;
 
 //! @brief Makes test for tree processes.
-GEN(T) void tree_service(ARGS, common::option<message> const& m, device_t parent, set_t const& below, bool render = false) { CODE
+FUN void tree_service(ARGS, common::option<message> const& m, device_t parent, set_t const& below, bool render = false) { CODE
     spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const& m){
         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
         bool dest_path = below.count(m.to) > 0;
@@ -200,12 +201,12 @@ FUN void device_automaton(ARGS, devstatus& stat) {
     switch (stat) {
         case devstatus::IDLE:
         {
-            // generate (random) request
+           	// random message with 1% probability during time [1..50]
             common::option<message> m = get_message(CALL, node.storage(tags::devices{}));
 
             if (!m.empty()) stat = devstatus::DISCO;
 
-    	    spherical_discovery(CALL, m);
+    	    spherical_discovery(CALL, m, true);  // transition to DISCO
 
             // spanning tree definition
             device_t parent = flex_parent(CALL, false, comm);
@@ -214,12 +215,13 @@ FUN void device_automaton(ARGS, devstatus& stat) {
                                             {
        									       x.insert(y.begin(), y.end());
        									       return x; });
-
-            tree_service(CALL, m, parent, below);
+            tree_service(CALL, common::option<message>{}, parent, below, false);
 
             break;
         }
         case devstatus::DISCO:
+            spherical_discovery(CALL, common::option<message>{}, true);
+
             break;
         case devstatus::SERVED:
             break;
@@ -247,30 +249,10 @@ MAIN() {
        	bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
        	node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
        	node.storage(node_size{}) = highlight ? 20 : 10;
-       	// random message with 1% probability during time [10..50]
-        common::option<message> m = get_message(CALL, node.storage(tags::devices{}));
-       	
-        if (ph == devstatus::IDLE)
-        {
-        }
-        if (ph == devstatus::DISCO)
-        {
-            // tests spherical processes with legacy termination
-            // spherical_test(CALL, m, legacy{});
-            // spherical_test(CALL, m, share{});
-            // spherical_test(CALL, m, ispp{});
-            // spherical_test(CALL, m, wispp{}, true);
-        }
-        else
-        {
-            // test tree processes with legacy termination
-            // tree_test(CALL, m, parent, below, legacy{});
-            // tree_test(CALL, m, parent, below, share{});
-            // tree_test(CALL, m, parent, below, ispp{});
-            // tree_test(CALL, m, parent, below, wispp{}, true);
-        }
 
-    return ph;
+        device_automaton(CALL, ph);       	
+
+        return ph;
     });
 }
 //! @brief Exports for the main function.
