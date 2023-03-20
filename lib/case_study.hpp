@@ -35,15 +35,12 @@ constexpr size_t period = 1;
 //! @brief Communication radius.
 constexpr size_t comm = 100;
 
-//! @brief Number of service types
-constexpr size_t NUM_SVC_TYPES = 5;
-
 //! @brief Possibly generates a discovery message, given the number of devices.
 FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [1..50]
     if (node.uid == devices-1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
-        m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(NUM_SVC_TYPES));
+        m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{})));
         node.storage(tags::sent_count{}) += 1;
     }
     return m;

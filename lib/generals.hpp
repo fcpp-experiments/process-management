@@ -188,6 +188,9 @@ namespace tags {
     //! @brief Shape of the current node.
     struct node_shape {};
 
+    //! @brief Number of service types.
+    struct num_svc_types {};
+
     //! @brief Service(s) offered by the current node.
     struct offered_svc {};
 } // tags

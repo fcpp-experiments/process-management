@@ -37,6 +37,9 @@ constexpr size_t dim = 3;
 //! @brief End of simulated time.
 constexpr size_t end = 50;
 
+//! @brief Number of service types.
+const size_t max_svc_id = 5;
+
 //! @brief Namespace for component options.
 namespace option {
 
@@ -231,8 +234,9 @@ DECLARE_OPTIONS(list,
         left_color,                     color,
         right_color,                    color,
         node_size,                      double,
-        node_shape,                     shape
-        ,offered_svc,                    size_t
+        node_shape,                     shape,
+        num_svc_types,                  size_t,
+        offered_svc,                    size_t
     >,
     // the basic tags and corresponding aggregators to be logged
 #ifdef ALLPLOTS
@@ -257,7 +261,8 @@ DECLARE_OPTIONS(list,
         devices,            i<devices>,
         tvar,               functor::div<i<tvar>, n<100>>,
         tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>,
-        offered_svc,        nu<5>
+        num_svc_types,      n<max_svc_id>,         
+        offered_svc,        nu<max_svc_id>
     >,
     // general parameters to use for plotting
     extra_info<
