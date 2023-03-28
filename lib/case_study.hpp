@@ -182,9 +182,11 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_
 //! @brief Process that does a spherical broadcast of a service request.
 FUN message_log_type spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
     message_log_type r = spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
-        // if I offer a service matching the request, I (can) reply
-        //status s = node.uid == m.to ? status::terminated_output : status::internal;
         status s = status::internal;
+
+        // if I offer a service matching the request, I reply by producing output
+        if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+
         return make_tuple(node.current_time(), s);
     }, m, node.storage(tags::infospeed{}), render);
 
@@ -209,27 +211,32 @@ FUN void tree_service(ARGS, common::option<message> const& m, device_t parent, s
 //! @brief Exports for the main function.
 FUN_EXPORT tree_service_t = export_list<spawn_profiler_t>;
 
-//! @brief Manages behavior of devices with an automaton.
-FUN void device_automaton(ARGS, devstatus& stat) {
-    message_log_type r;
 
-    switch (stat) {
+//! @brief Result type of spawn calls dispatching messages.
+using parametric_status_t = std::pair<devstatus,message>;
+
+//! @brief Manages behavior of devices with an automaton.
+FUN void device_automaton(ARGS, parametric_status_t &parst) {
+    message_log_type r;
+    devstatus st = parst.first;
+    message par = parst.second;
+
+    switch (st) {
         case devstatus::IDLE:
         {
            	// random message with 1% probability during time [1..50]
             common::option<message> m = get_disco_message(CALL, node.storage(tags::devices{}));
 
-            if (!m.empty()) stat = devstatus::DISCO;
+            if (!m.empty()) parst.first = devstatus::DISCO;
 
     	    r = spherical_discovery(CALL, m, true);  // transition to DISCO
 
             // spanning tree definition
             device_t parent = flex_parent(CALL, false, comm);
             // routing sets along the tree
-            set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
-                                            {
+            set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y) {
        									       x.insert(y.begin(), y.end());
-       									       return x; });
+       									       return x;});
             tree_service(CALL, common::option<message>{}, parent, below, false);
 
             break;
@@ -258,7 +265,7 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
-    old(CALL, devstatus::IDLE, [&](devstatus st){
+    old(CALL, parametric_status_t{devstatus::IDLE,message{}}, [&](parametric_status_t parst){
        	// basic node rendering
        	bool is_src = false;
        	bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
@@ -268,17 +275,18 @@ MAIN() {
         node.storage(proc_data{}).clear();
         node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
         
-        device_automaton(CALL, st);       	
+        device_automaton(CALL, parst);       	
 
+        devstatus st = parst.first;
         int proc_num = node.storage(proc_data{}).size() - 1;
         node.storage(node_color{}) = status_color(st, proc_num);
         if (proc_num > 0) node.storage(node_size{}) *= 1.5;
 
-        return st;
+        return parst;
     });
 }
 //! @brief Exports for the main function.
-    struct main_t : public export_list<rectangle_walk_t<3>, devstatus, spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t> {};
+    struct main_t : public export_list<rectangle_walk_t<3>, std::pair<devstatus,message>, spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t> {};
 
 
 } // coordination
