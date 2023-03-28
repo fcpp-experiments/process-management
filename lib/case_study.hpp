@@ -34,7 +34,7 @@ color status_color(const devstatus st, const size_t nproc) {
 
     switch (st) {
     case devstatus::IDLE:
-        sc = ((nproc > 1) ? color(GREEN) : color(WHITE));
+        sc = (nproc ? color(GREEN) : color(WHITE));
         break;
     case devstatus::DISCO:
         sc = color(RED);
@@ -162,9 +162,6 @@ FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
 GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render) {
-    // clear up stats data
-    node.storage(tags::proc_data{}).clear();
-    node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
     // dispatches messages
     message_log_type r = spawn(node, call_point, [&](message const& m){
         auto r = process(m);
@@ -267,10 +264,15 @@ MAIN() {
        	bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
        	node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
        	node.storage(node_size{}) = highlight ? 20 : 10;
+        // clear up stats data
+        node.storage(proc_data{}).clear();
+        node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
         
         device_automaton(CALL, st);       	
 
-        node.storage(node_color{}) = status_color(st, node.storage(proc_data{}).size());
+        int proc_num = node.storage(proc_data{}).size() - 1;
+        node.storage(node_color{}) = status_color(st, proc_num);
+        if (proc_num > 0) node.storage(node_size{}) *= 1.5;
 
         return st;
     });
