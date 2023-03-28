@@ -148,7 +148,7 @@ FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
-GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render) {
+GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render) {
     // clear up stats data
     node.storage(tags::proc_data{}).clear();
     node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
@@ -162,19 +162,23 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool
     }, std::forward<S>(key_set));
     // compute stats
     proc_stats(CALL, r, render, T{});
+
+    return r;
 }
 //! @brief Export list for spawn_profiler.
 FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, proc_stats_t>;
 
 
 //! @brief Process that does a spherical broadcast of a service request.
-FUN void spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
-    spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
+FUN message_log_type spherical_discovery(ARGS, common::option<message> const& m, bool render = false) { CODE
+    message_log_type r = spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const& m){
         // if I offer a service matching the request, I (can) reply
         //status s = node.uid == m.to ? status::terminated_output : status::internal;
         status s = status::internal;
         return make_tuple(node.current_time(), s);
     }, m, node.storage(tags::infospeed{}), render);
+
+    return r;
 }
 FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
@@ -197,6 +201,8 @@ FUN_EXPORT tree_service_t = export_list<spawn_profiler_t>;
 
 //! @brief Manages behavior of devices with an automaton.
 FUN void device_automaton(ARGS, devstatus& stat) {
+    message_log_type r;
+
     switch (stat) {
         case devstatus::IDLE:
         {
@@ -205,7 +211,7 @@ FUN void device_automaton(ARGS, devstatus& stat) {
 
             if (!m.empty()) stat = devstatus::DISCO;
 
-    	    spherical_discovery(CALL, m, true);  // transition to DISCO
+    	    r = spherical_discovery(CALL, m, true);  // transition to DISCO
 
             // spanning tree definition
             device_t parent = flex_parent(CALL, false, comm);
@@ -219,7 +225,7 @@ FUN void device_automaton(ARGS, devstatus& stat) {
             break;
         }
         case devstatus::DISCO:
-            spherical_discovery(CALL, common::option<message>{}, true);
+            r = spherical_discovery(CALL, common::option<message>{}, true);
 
             break;
         case devstatus::SERVED:
