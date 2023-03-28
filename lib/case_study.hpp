@@ -29,12 +29,12 @@ enum class devstatus {
     SERVING  // serving
 };
 
-color status_color(const devstatus &st) {
+color status_color(const devstatus st, const size_t nproc) {
     color sc;
 
     switch (st) {
     case devstatus::IDLE:
-        sc = color(WHITE);
+        sc = ((nproc > 1) ? color(GREEN) : color(WHITE));
         break;
     case devstatus::DISCO:
         sc = color(RED);
@@ -270,7 +270,7 @@ MAIN() {
         
         device_automaton(CALL, st);       	
 
-        node.storage(node_color{}) = status_color(st);
+        node.storage(node_color{}) = status_color(st, node.storage(proc_data{}).size());
 
         return st;
     });
