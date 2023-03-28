@@ -29,6 +29,26 @@ enum class devstatus {
     SERVING  // serving
 };
 
+color status_color(const devstatus &st) {
+    color sc;
+
+    switch (st) {
+    case devstatus::IDLE:
+        sc = color(WHITE);
+        break;
+    case devstatus::DISCO:
+        sc = color(RED);
+        break;
+    case devstatus::OFFER:
+        sc = color(BLUE);
+        break;
+    default:
+        sc = color(BLACK);
+    }
+
+    return sc;
+}
+
 //! @brief Length of a round
 constexpr size_t period = 1;
 
@@ -62,13 +82,6 @@ GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T) {
     node.storage(max_proc<T>{}) = max(node.storage(max_proc<T>{}), proc_num);
 #endif
     node.storage(tot_proc<T>{}) += proc_num;
-    // additional node rendering
-    if (render) {
-        if (proc_num > 0) node.storage(node_size{}) *= 1.5;
-        node.storage(node_color{})  = node.storage(proc_data{})[min(proc_num, 1)];
-        node.storage(left_color{})  = node.storage(proc_data{})[min(proc_num, 2)];
-        node.storage(right_color{}) = node.storage(proc_data{})[min(proc_num, 3)];
-    }
     // stats on delivery success
     old(node, call_point, message_log_type{}, [&](message_log_type m){
         for (auto const& x : nm) {
@@ -248,16 +261,18 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
-    old(CALL, devstatus::IDLE, [&](devstatus ph){
+    old(CALL, devstatus::IDLE, [&](devstatus st){
        	// basic node rendering
        	bool is_src = false;
        	bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
        	node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
        	node.storage(node_size{}) = highlight ? 20 : 10;
+        
+        device_automaton(CALL, st);       	
 
-        device_automaton(CALL, ph);       	
+        node.storage(node_color{}) = status_color(st);
 
-        return ph;
+        return st;
     });
 }
 //! @brief Exports for the main function.
