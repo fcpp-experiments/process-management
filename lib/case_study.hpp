@@ -61,7 +61,7 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     // random message with 1% probability during time [1..50]
     if (node.uid == devices-1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
-        m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{})));
+        m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{})-1));
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -102,28 +102,6 @@ GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T) {
 FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 
 
-//! @brief Legacy termination logic (COORD19).
-template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, message const&, T<tags::legacy>) {
-     bool terminating = s == status::terminated_output;
-     bool terminated = old(CALL, terminating, [&](bool ot){
-        return any_hood(CALL, nbr(CALL, ot), ot) or terminating;
-     });
-    bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-    if (exiting) s = status::external;
-    else if (terminating) s = status::internal_output;
-}
-//! @brief Legacy termination logic updated to use share (LMCS2020) instead of rep+nbr.
-template <typename node_t, template<class> class T>
-void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) {
-    bool terminating = s == status::terminated_output;
-    bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
-        return any_hood(CALL, nt) or terminating;
-    });
-    bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-    if (exiting) s = status::external;
-    else if (terminating) s = status::internal_output;
-}
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::ispp>) {
@@ -227,9 +205,19 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) {
            	// random message with 1% probability during time [1..50]
             common::option<message> m = get_disco_message(CALL, node.storage(tags::devices{}));
 
-            if (!m.empty()) parst.first = devstatus::DISCO;
+            if (!m.empty()) { // transition to DISCO
+                //node.storage(tags::offered_svc{}) = m.front().svc_type;
+                parst.first = devstatus::DISCO;
+                parst.second = m;
+            }
 
-    	    r = spherical_discovery(CALL, m, true);  // transition to DISCO
+    	    r = spherical_discovery(CALL, m, true);  
+
+            // transitions
+            if (r.size()) { // transition to OFFER
+                parst.first = devstatus::OFFER;
+                parst.second = (*r.begin()).first;
+            }
 
             // spanning tree definition
             device_t parent = flex_parent(CALL, false, comm);
@@ -248,6 +236,8 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) {
         case devstatus::SERVED:
             break;
         case devstatus::OFFER:
+            r = spherical_discovery(CALL, common::option<message>{}, true);
+
             break;
         case devstatus::SERVING:
             break;
