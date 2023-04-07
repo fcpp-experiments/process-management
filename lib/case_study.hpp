@@ -206,14 +206,12 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) {
             common::option<message> m = get_disco_message(CALL, node.storage(tags::devices{}));
 
             if (!m.empty()) { // transition to DISCO
-                //node.storage(tags::offered_svc{}) = m.front().svc_type;
                 parst.first = devstatus::DISCO;
                 parst.second = m;
             }
 
     	    r = spherical_discovery(CALL, m, true);  
 
-            // transitions
             if (r.size()) { // transition to OFFER
                 parst.first = devstatus::OFFER;
                 parst.second = (*r.begin()).first;
@@ -245,7 +243,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) {
             break;
     }
 }
-FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t>;
+FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -276,7 +274,7 @@ MAIN() {
     });
 }
 //! @brief Exports for the main function.
-    struct main_t : public export_list<rectangle_walk_t<3>, std::pair<devstatus,message>, spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t> {};
+    struct main_t : public export_list<rectangle_walk_t<3>, std::pair<devstatus,message>,device_automaton_t> {};
 
 
 } // coordination
