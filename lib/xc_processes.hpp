@@ -61,14 +61,18 @@ constexpr size_t comm = 100;
 //! @brief Possibly generates a message, given the number of devices and the experiment tag.
 FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
+    #ifndef MULTI_TEST
+    bool genmsg = node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0;
+    #else
+    bool genmsg = node.uid >= devices-10 && node.current_time() > 1 && node.current_time() < 26 && node.next_real() < 0.05;
+    #endif
     // random message with 1% probability during time [10..50]
-    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    if (genmsg) {
         m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
 }
-
 
 //! @brief Result type of spawn calls dispatching messages.
 // TODO ****check --> should be size_t
@@ -170,16 +174,10 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         if (dest) {
             fdwav = field<bool>(false);
         } else if (rnd == 1) {
-            //fdwav = field<bool>(true);
             fdwav = field<bool>(false);
             fdwav = mod_self(CALL, fdwav, true);
             fdwav = mod_other(CALL, fdwav, true);
-        } 
-        // else if (rnd == 2) {
-        //      fdwav = field<bool>(false);
-        //      fdwav = mod_self(CALL, fdwav, true);
-        // }
-        else {
+        } else {
              fdwav = field<bool>(false);
         }
 
