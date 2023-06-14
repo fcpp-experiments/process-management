@@ -150,19 +150,17 @@ namespace fcpp
         FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 
         //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
-        GEN(T, G, S)
-        message_log_type spawn_profiler(ARGS, T, G &&process, S &&key_set, real_t v, bool render)
+        GEN(T, G, S) message_log_type spawn_profiler(ARGS, T, G &&process, S &&key_set, real_t v, bool render)
         {
             // dispatches messages
-            message_log_type r = spawn(
-                node, call_point, [&](message const &m)
-                {
-        auto r = process(m);
-        termination_logic(CALL, get<1>(r), v, m, T{});
-        real_t key = get<1>(r) == status::external ? 0.5 : 1;
-        node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
-        return r; },
-                std::forward<S>(key_set));
+            message_log_type r = spawn(node, call_point, [&](message const &m) {
+                    auto r = process(m);
+                    termination_logic(CALL, get<1>(r), v, m, T{});
+                    real_t key = get<1>(r) == status::external ? 0.5 : 1;
+                    node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
+                    return r; 
+                }, std::forward<S>(key_set));
+            
             // compute stats
             proc_stats(CALL, r, render, T{});
 
@@ -175,16 +173,15 @@ namespace fcpp
         FUN message_log_type spherical_discovery(ARGS, common::option<message> const &m, bool render = false)
         {
             CODE
-                message_log_type r = spawn_profiler(
-                    CALL, tags::spherical<tags::wispp>{}, [&](message const &m)
-                    {
-        status s = status::internal;
+            message_log_type r = spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const &m) {
+                    status s = status::internal;
 
-        // if I offer a service matching the request, I reply by producing output
-        if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+                    // if I offer a service matching the request, I reply by producing output
+                    if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
-        return make_tuple(node.current_time(), s); },
-                    m, node.storage(tags::infospeed{}), render);
+                    return make_tuple(node.current_time(), s); 
+                },
+                m, node.storage(tags::infospeed{}), render);
 
             return r;
         }
@@ -197,15 +194,20 @@ namespace fcpp
         FUN void tree_offer(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false)
         {
             CODE
-                spawn_profiler(
-                    CALL, tags::tree<tags::ispp>{}, [&](message const &m)
-                    {
-        bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
-        bool dest_path = below.count(m.to) > 0;
-        status s = node.uid == m.to ? status::terminated_output :
-                   source_path or dest_path ? status::internal : status::external;
-        return make_tuple(node.current_time(), s); },
-                    m, 0.9, render);
+            spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
+                    bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
+                    bool dest_path = below.count(m.to) > 0;
+                    status s = node.uid == m.to ? status::terminated_output :
+                            source_path or dest_path ? status::internal : status::external;
+
+                    // if I requested the offered service, I reply by producing output
+                    if (node.uid == m.from) {
+                        s = status::internal_output;
+                    }
+
+                    return make_tuple(node.current_time(), s); 
+                },
+                m, 0.9, render);
         }
         //! @brief Exports for the main function.
         FUN_EXPORT tree_offer_t = export_list<spawn_profiler_t>;
