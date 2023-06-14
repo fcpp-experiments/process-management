@@ -233,65 +233,62 @@ namespace fcpp
         //! @brief Manages behavior of devices with an automaton.
         FUN void device_automaton(ARGS, parametric_status_t &parst)
         {
-            message_log_type r;
+            message_log_type rd;
             devstatus st = parst.first;
             message par = parst.second;
+            common::option<message> md = common::option<message>{};
+            common::option<message> mo = common::option<message>{};
+            common::option<message> ms = common::option<message>{};
 
-            // spanning tree definition
+            // spanning tree definition: aggregate computation of parent and below set
             device_t parent = flex_parent(CALL, false, comm);
-            // routing sets along the tree
             set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
                                             {
        									       x.insert(y.begin(), y.end());
-       									       return x; });
+       									       return x; 
+                                            });
 
             switch (st) {
             case devstatus::IDLE:
             {
                 // random message with 1% probability during time [1..50]
-                common::option<message> m = get_disco_message(CALL, node.storage(tags::devices{}));
+                md = get_disco_message(CALL, node.storage(tags::devices{}));
 
-                if (!m.empty())
+                if (!md.empty())
                 { // transition to DISCO
                     parst.first = devstatus::DISCO;
-                    parst.second = m;
+                    parst.second = md;
                 }
-
-                r = spherical_discovery(CALL, m, true);
-
-                if (r.size())
-                { // transition to OFFER
-                    parst.first = devstatus::OFFER;
-                    parst.second = (*r.begin()).first;
-                }
-
-                tree_offer(CALL, common::option<message>{}, parent, below, true);
-                tree_service(CALL, common::option<message>{}, parent, below, true);
 
                 break;
             }
             case devstatus::DISCO:
-                r = spherical_discovery(CALL, common::option<message>{}, true);
-
                 break;
             case devstatus::SERVED:
                 break;
             case devstatus::OFFER:
-                r = spherical_discovery(CALL, common::option<message>{}, true);
-
-                if (parst.second.type == msgtype::DISCO)
-                { // just transitioned
+                if (parst.second.type == msgtype::DISCO) { // just transitioned
                     parst.second.type == msgtype::OFFER;
-                    tree_offer(CALL, parst.second, parent, below, true);
+                    mo = parst.second;
                 }
-                else
-                {
-                    tree_offer(CALL, common::option<message>{}, parent, below, true);
-                }
-                tree_service(CALL, common::option<message>{}, parent, below, true);
 
                 break;
             case devstatus::SERVING:
+                break;
+            default:
+                break;
+            }
+
+            rd = spherical_discovery(CALL, md, true);
+            tree_offer(CALL, mo, parent, below, true);
+            tree_service(CALL, ms, parent, below, true);
+
+            switch (st) {
+            case devstatus::IDLE:
+                if (rd.size()) { // transition to OFFER
+                    parst.first = devstatus::OFFER;
+                    parst.second = (*rd.begin()).first;
+                }
                 break;
             default:
                 break;
@@ -300,33 +297,31 @@ namespace fcpp
         FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t>;
 
         //! @brief Main case study function.
-        MAIN()
-        {
+        MAIN() {
             // import tags for convenience
             using namespace tags;
             // random walk
             size_t l = node.storage(side{});
             rectangle_walk(CALL, make_vec(0, 0, 20), make_vec(l, l, 20), node.storage(speed{}) * comm / period, 1);
 
-            old(CALL, parametric_status_t{devstatus::IDLE, message{}}, [&](parametric_status_t parst)
-                {
-       	// basic node rendering
-       	bool is_src = false;
-       	bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
-       	node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
-       	node.storage(node_size{}) = highlight ? 20 : 10;
-        // clear up stats data
-        node.storage(proc_data{}).clear();
-        node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
-        
-        device_automaton(CALL, parst);       	
+            old(CALL, parametric_status_t{devstatus::IDLE, message{}}, [&](parametric_status_t parst) {
+                // basic node rendering
+                bool is_src = false;
+                bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
+                node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
+                node.storage(node_size{}) = highlight ? 20 : 10;
+                // clear up stats data
+                node.storage(proc_data{}).clear();
+                node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
+                
+                device_automaton(CALL, parst);       	
 
-        devstatus st = parst.first;
-        int proc_num = node.storage(proc_data{}).size() - 1;
-        node.storage(node_color{}) = status_color(st, proc_num);
-        if (proc_num > 0) node.storage(node_size{}) *= 1.5;
+                devstatus st = parst.first;
+                int proc_num = node.storage(proc_data{}).size() - 1;
+                node.storage(node_color{}) = status_color(st, proc_num);
+                if (proc_num > 0) node.storage(node_size{}) *= 1.5;
 
-        return parst; });
+                return parst; });
         }
         //! @brief Exports for the main function.
         struct main_t : public export_list<rectangle_walk_t<3>, std::pair<devstatus, message>, device_automaton_t>
