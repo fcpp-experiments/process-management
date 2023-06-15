@@ -191,40 +191,35 @@ namespace fcpp
         using set_t = std::unordered_set<device_t>;
 
         //! @brief Makes test for tree processes.
-        FUN void tree_offer(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false)
-        {
-            CODE
-            spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
+        FUN message_log_type tree_offer(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false) { CODE
+            message_log_type r = spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
                     bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
                     bool dest_path = below.count(m.to) > 0;
                     status s = node.uid == m.to ? status::terminated_output :
                             source_path or dest_path ? status::internal : status::external;
 
                     // if I requested the offered service, I reply by producing output
-                    if (node.uid == m.from) {
+                    if (node.uid == m.to) {
                         s = status::internal_output;
                     }
 
                     return make_tuple(node.current_time(), s); 
-                },
-                m, 0.9, render);
+                }, m, 0.9, render);
+
+            return r;
         }
         //! @brief Exports for the main function.
         FUN_EXPORT tree_offer_t = export_list<spawn_profiler_t>;
 
         //! @brief Makes test for tree processes.
-        FUN void tree_service(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false)
-        {
-            CODE
-                spawn_profiler(
-                    CALL, tags::tree<tags::ispp>{}, [&](message const &m)
-                    {
-        bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
-        bool dest_path = below.count(m.to) > 0;
-        status s = node.uid == m.to ? status::terminated_output :
-                   source_path or dest_path ? status::internal : status::external;
-        return make_tuple(node.current_time(), s); },
-                    m, 0.9, render);
+        FUN void tree_service(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false) { CODE
+            spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
+                    bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
+                    bool dest_path = below.count(m.to) > 0;
+                    status s = node.uid == m.to ? status::terminated_output :
+                            source_path or dest_path ? status::internal : status::external;
+                    return make_tuple(node.current_time(), s); 
+                }, m, 0.9, render);
         }
         //! @brief Exports for the main function.
         FUN_EXPORT tree_service_t = export_list<spawn_profiler_t>;
@@ -235,7 +230,7 @@ namespace fcpp
         //! @brief Manages behavior of devices with an automaton.
         FUN void device_automaton(ARGS, parametric_status_t &parst)
         {
-            message_log_type rd;
+            message_log_type rd, rto;
             devstatus st = parst.first;
             message par = parst.second;
             common::option<message> md = common::option<message>{};
@@ -261,6 +256,12 @@ namespace fcpp
             case devstatus::DISCO:
                 break;
             case devstatus::SERVED:
+                if (parst.second.type == msgtype::OFFER) { // just transitioned
+                    parst.second.type == msgtype::ACCEPT;
+                    std::swap(parst.second.from, parst.second.to);
+                    mo = parst.second;
+                }
+
                 break;
             case devstatus::OFFER:
                 if (parst.second.type == msgtype::DISCO) { // just transitioned
@@ -277,7 +278,7 @@ namespace fcpp
             }
 
             rd = spherical_discovery(CALL, md, true);
-            tree_offer(CALL, mo, parent, below, true);
+            rto = tree_offer(CALL, mo, parent, below, true);
             tree_service(CALL, ms, parent, below, true);
 
             switch (st) {
@@ -293,6 +294,14 @@ namespace fcpp
                     parst.second = (*rd.begin()).first;
                 }
                 break;
+            case devstatus::DISCO:
+                if (rto.size()) { // transition to SERVED
+                    parst.first = devstatus::SERVED;
+                    // ASSUMPTION: if more than one candidate, get SERVED by first
+                    parst.second = (*rd.begin()).first;
+                }
+                break;
+
             default:
                 break;
             }
