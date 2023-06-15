@@ -256,12 +256,6 @@ namespace fcpp
                 // random message with 1% probability during time [1..50]
                 md = get_disco_message(CALL, node.storage(tags::devices{}));
 
-                if (!md.empty())
-                { // transition to DISCO
-                    parst.first = devstatus::DISCO;
-                    parst.second = md;
-                }
-
                 break;
             }
             case devstatus::DISCO:
@@ -271,6 +265,7 @@ namespace fcpp
             case devstatus::OFFER:
                 if (parst.second.type == msgtype::DISCO) { // just transitioned
                     parst.second.type == msgtype::OFFER;
+                    std::swap(parst.second.from, parst.second.to);
                     mo = parst.second;
                 }
 
@@ -287,8 +282,14 @@ namespace fcpp
 
             switch (st) {
             case devstatus::IDLE:
+                if (!md.empty()) { // transition to DISCO
+                    parst.first = devstatus::DISCO;
+                    parst.second = md;
+                }
+
                 if (rd.size()) { // transition to OFFER
                     parst.first = devstatus::OFFER;
+                    // ASSUMPTION: if more than one candidate, OFFER only to first
                     parst.second = (*rd.begin()).first;
                 }
                 break;
