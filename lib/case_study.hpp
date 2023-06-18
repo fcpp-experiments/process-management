@@ -216,12 +216,11 @@ namespace fcpp
 
         //! @brief Manages behavior of devices with an automaton.
         FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
-            message_log_type rd, rto;
+            message_log_type rd, rtm;
             devstatus st = parst.first;
             message par = parst.second;
             common::option<message> md = common::option<message>{};
-            common::option<message> mo = common::option<message>{};
-            common::option<message> ms = common::option<message>{};
+            common::option<message> mtm = common::option<message>{};
 
             // spanning tree definition: aggregate computation of parent and below set
             device_t parent = flex_parent(CALL, false, comm);
@@ -245,7 +244,7 @@ namespace fcpp
                 if (parst.second.type == msgtype::OFFER) { // just transitioned
                     parst.second.type == msgtype::ACCEPT;
                     std::swap(parst.second.from, parst.second.to);
-                    mo = parst.second;
+                    mtm = parst.second;
                 }
 
                 break;
@@ -253,7 +252,7 @@ namespace fcpp
                 if (parst.second.type == msgtype::DISCO) { // just transitioned
                     parst.second.type == msgtype::OFFER;
                     std::swap(parst.second.from, parst.second.to);
-                    mo = parst.second;
+                    mtm = parst.second;
                 }
 
                 break;
@@ -264,8 +263,7 @@ namespace fcpp
             }
 
             rd = spherical_discovery(CALL, md, true);
-            rto = tree_message(CALL, mo, parent, below, true);
-            tree_message(CALL, ms, parent, below, true);
+            rtm = tree_message(CALL, mtm, parent, below, true);
 
             switch (st) {
             case devstatus::IDLE:
@@ -281,10 +279,10 @@ namespace fcpp
                 }
                 break;
             case devstatus::DISCO:
-                if (rto.size()) { // transition to SERVED
+                if (rtm.size()) { // transition to SERVED
                     parst.first = devstatus::SERVED;
                     // ASSUMPTION: if more than one candidate, get SERVED by first
-                    parst.second = (*rd.begin()).first;
+                    parst.second = (*rtm.begin()).first;
                 }
                 break;
 
