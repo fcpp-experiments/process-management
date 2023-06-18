@@ -190,8 +190,8 @@ namespace fcpp
         //! @brief The type for a set of devices.
         using set_t = std::unordered_set<device_t>;
 
-        //! @brief Makes test for tree processes.
-        FUN message_log_type tree_offer(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false) { CODE
+        //! @brief Sends a message over a tree topology.
+        FUN message_log_type tree_message(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false) { CODE
             message_log_type r = spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
                     bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
                     bool dest_path = below.count(m.to) > 0;
@@ -209,27 +209,13 @@ namespace fcpp
             return r;
         }
         //! @brief Exports for the main function.
-        FUN_EXPORT tree_offer_t = export_list<spawn_profiler_t>;
-
-        //! @brief Makes test for tree processes.
-        FUN void tree_service(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false) { CODE
-            spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
-                    bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
-                    bool dest_path = below.count(m.to) > 0;
-                    status s = node.uid == m.to ? status::terminated_output :
-                            source_path or dest_path ? status::internal : status::external;
-                    return make_tuple(node.current_time(), s); 
-                }, m, 0.9, render);
-        }
-        //! @brief Exports for the main function.
-        FUN_EXPORT tree_service_t = export_list<spawn_profiler_t>;
+        FUN_EXPORT tree_message_t = export_list<spawn_profiler_t>;
 
         //! @brief Result type of spawn calls dispatching messages.
         using parametric_status_t = std::pair<devstatus, message>;
 
         //! @brief Manages behavior of devices with an automaton.
-        FUN void device_automaton(ARGS, parametric_status_t &parst)
-        {
+        FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             message_log_type rd, rto;
             devstatus st = parst.first;
             message par = parst.second;
@@ -278,8 +264,8 @@ namespace fcpp
             }
 
             rd = spherical_discovery(CALL, md, true);
-            rto = tree_offer(CALL, mo, parent, below, true);
-            tree_service(CALL, ms, parent, below, true);
+            rto = tree_message(CALL, mo, parent, below, true);
+            tree_message(CALL, ms, parent, below, true);
 
             switch (st) {
             case devstatus::IDLE:
@@ -306,7 +292,7 @@ namespace fcpp
                 break;
             }
         }
-        FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_service_t>;
+        FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t>;
 
         //! @brief Main case study function.
         MAIN() {
