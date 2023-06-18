@@ -250,6 +250,14 @@ T parent_collection(ARGS, device_t parent, T const& value, G&& accumulate) { COD
 GEN_EXPORT(T) parent_collection_t = export_list<T, device_t>;
 
 
+//! @brief Computes a field of random doubles according to a given distribution.
+GEN(T) field<real_t> rand_hood(ARGS, T&& dist) {
+    return map_hood([&](device_t){
+        return dist(node.generator());
+    }, node.nbr_uid());
+}
+
+
 } // coordination
 
 

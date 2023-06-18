@@ -10,6 +10,7 @@
 
 #include "lib/common/option.hpp"
 #include "lib/component/calculus.hpp"
+#include "lib/option/distribution.hpp"
 #include "lib/generals.hpp"
 
 
@@ -44,6 +45,18 @@ constexpr size_t period = 1;
 
 //! @brief Communication radius.
 constexpr size_t comm = 100;
+
+//! @brief Standard deviation for distance estimations.
+constexpr size_t dist_dev = 30;
+
+//! @brief Generating distribution for distance estimations.
+std::weibull_distribution<real_t> dist_distr = distribution::make<std::weibull_distribution>(real_t(1), real_t(dist_dev*0.01));
+
+
+//! @brief Adjusted nbr_dist value accounting for errors.
+FUN field<real_t> adjusted_nbr_dist(ARGS) {
+    return node.nbr_dist() * rand_hood(CALL, dist_distr) + node.storage(tags::speed{}) * comm / period * node.nbr_lag();
+}
 
 
 //! @brief Possibly generates a message, given the number of devices and the experiment tag.
@@ -131,7 +144,7 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::ispp
         return any_hood(CALL, nt) or terminating;
     });
     bool source = m.from == node.uid;
-    double ds = monotonic_distance(CALL, source, node.nbr_dist() + node.storage(speed{}) * comm / period * node.nbr_lag());
+    double ds = monotonic_distance(CALL, source, adjusted_nbr_dist(CALL));
     double dt = monotonic_distance(CALL, source, node.nbr_lag());
     bool slow = ds < v * comm / period * (dt - period);
     if (terminated or slow) {
@@ -147,7 +160,7 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::wisp
         return any_hood(CALL, nt) or terminating;
     });
     bool source = m.from == node.uid and old(CALL, true, false);
-    double ds = monotonic_distance(CALL, source, node.nbr_dist());
+    double ds = monotonic_distance(CALL, source, adjusted_nbr_dist(CALL));
     double dt = monotonic_distance(CALL, source, node.nbr_lag());
     bool slow = ds < v * comm / period * (dt - period);
     if (terminated or slow) {
