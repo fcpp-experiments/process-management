@@ -124,12 +124,14 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) 
 //! @brief Novel termination logic.
 template <typename node_t, template<class> class T>
 void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::ispp>) {
+    using namespace tags;
+
     bool terminating = s == status::terminated_output;
     bool terminated = nbr(CALL, terminating, [&](field<bool> nt){
         return any_hood(CALL, nt) or terminating;
     });
     bool source = m.from == node.uid;
-    double ds = monotonic_distance(CALL, source, node.nbr_dist());
+    double ds = monotonic_distance(CALL, source, node.nbr_dist() + node.storage(speed{}) * comm / period * node.nbr_lag());
     double dt = monotonic_distance(CALL, source, node.nbr_lag());
     bool slow = ds < v * comm / period * (dt - period);
     if (terminated or slow) {
@@ -225,9 +227,9 @@ MAIN() {
 #ifndef NOSPHERE
     // tests spherical processes with legacy termination
     spherical_test(CALL, m, legacy{});
-    spherical_test(CALL, m, share{});
+    spherical_test(CALL, m, share{}, true);
     spherical_test(CALL, m, ispp{});
-    spherical_test(CALL, m, wispp{}, true);
+    spherical_test(CALL, m, wispp{});
 #endif
 #ifndef NOTREE
     // spanning tree definition
@@ -241,7 +243,7 @@ MAIN() {
     tree_test(CALL, m, parent, below, legacy{});
     tree_test(CALL, m, parent, below, share{});
     tree_test(CALL, m, parent, below, ispp{});
-    tree_test(CALL, m, parent, below, wispp{}, true);
+    tree_test(CALL, m, parent, below, wispp{});
 #endif
 }
 //! @brief Exports for the main function.
