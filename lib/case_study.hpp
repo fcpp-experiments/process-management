@@ -170,9 +170,7 @@ namespace fcpp
         FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, proc_stats_t>;
 
         //! @brief Process that does a spherical broadcast of a service request.
-        FUN message_log_type spherical_discovery(ARGS, common::option<message> const &m, bool render = false)
-        {
-            CODE
+        FUN message_log_type spherical_discovery(ARGS, common::option<message> const &m, bool render = false) { CODE
             message_log_type r = spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const &m) {
                     status s = status::internal;
 
@@ -180,8 +178,7 @@ namespace fcpp
                     if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
                     return make_tuple(node.current_time(), s); 
-                },
-                m, node.storage(tags::infospeed{}), render);
+                }, m, node.storage(tags::infospeed{}), render);
 
             return r;
         }
@@ -240,23 +237,24 @@ namespace fcpp
             }
             case devstatus::DISCO:
                 break;
-            case devstatus::SERVED:
-                if (parst.second.type == msgtype::OFFER) { // just transitioned
-                    parst.second.type == msgtype::ACCEPT;
-                    std::swap(parst.second.from, parst.second.to);
-                    mtm = parst.second;
-                }
-
-                break;
             case devstatus::OFFER:
                 if (parst.second.type == msgtype::DISCO) { // just transitioned
                     parst.second.type == msgtype::OFFER;
                     std::swap(parst.second.from, parst.second.to);
                     mtm = parst.second;
                 }
-
+                break;
+            case devstatus::SERVED:
+                if (parst.second.type == msgtype::OFFER) { // just transitioned
+                    parst.second.type == msgtype::ACCEPT;
+                    std::swap(parst.second.from, parst.second.to);
+                    mtm = parst.second;
+                }
                 break;
             case devstatus::SERVING:
+                if (parst.second.type == msgtype::ACCEPT) { // just transitioned
+                    // TODO simulate communication
+                }
                 break;
             default:
                 break;
@@ -285,7 +283,13 @@ namespace fcpp
                     parst.second = (*rtm.begin()).first;
                 }
                 break;
-
+            case devstatus::OFFER:
+                if (rtm.size()) { // transition to SERVING
+                    parst.first = devstatus::SERVING;
+                    // ASSUMPTION: if more than one candidate, SERVE the first
+                    parst.second = (*rtm.begin()).first;
+                }
+                break;
             default:
                 break;
             }
