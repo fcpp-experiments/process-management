@@ -37,6 +37,8 @@ constexpr size_t dim = 3;
 //! @brief End of simulated time.
 constexpr size_t end = 50;
 
+//! @brief Standard deviation for distance estimations.
+constexpr size_t dist_dev = 30;
 
 //! @brief Namespace for component options.
 namespace option {
