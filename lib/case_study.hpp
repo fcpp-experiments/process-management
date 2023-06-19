@@ -60,6 +60,9 @@ namespace fcpp
         //! @brief Communication radius.
         constexpr size_t comm = 100;
 
+        //! @brief Multiplier of hops for timeout (in rounds).
+        constexpr double timeout_coeff = 2;
+
         //! @brief Possibly generates a discovery message, given the number of devices.
         FUN common::option<message> get_disco_message(ARGS, size_t devices)
         {
@@ -78,32 +81,29 @@ namespace fcpp
         using message_log_type = std::unordered_map<message, times_t>;
 
         //! @brief Computes stats on message delivery and active processes.
-        GEN(T)
-        void proc_stats(ARGS, message_log_type const &nm, bool render, T)
-        {
+        GEN(T) void proc_stats(ARGS, message_log_type const &nm, bool render, T) {
             // import tags for convenience
             using namespace tags;
             // stats on number of active processes
             int proc_num = node.storage(proc_data{}).size() - 1;
-#ifdef ALLPLOTS
-            node.storage(max_proc<T>{}) = max(node.storage(max_proc<T>{}), proc_num);
-#endif
+            #ifdef ALLPLOTS
+                node.storage(max_proc<T>{}) = max(node.storage(max_proc<T>{}), proc_num);
+            #endif
             node.storage(tot_proc<T>{}) += proc_num;
             // stats on delivery success
-            old(node, call_point, message_log_type{}, [&](message_log_type m)
-                {
-        for (auto const& x : nm) {
-            if (m.count(x.first)) {
-#ifdef ALLPLOTS
-                node.storage(repeat_count<T>{}) += 1;
-#endif
-            } else {
-                node.storage(first_delivery_tot<T>{}) += x.second - x.first.time;
-                node.storage(delivery_count<T>{}) += 1;
-                m[x.first] = x.second;
-            }
-        }
-        return m; });
+            old(node, call_point, message_log_type{}, [&](message_log_type m) {
+                for (auto const& x : nm) {
+                    if (m.count(x.first)) {
+                    #ifdef ALLPLOTS
+                        node.storage(repeat_count<T>{}) += 1;
+                    #endif
+                    } else {
+                        node.storage(first_delivery_tot<T>{}) += x.second - x.first.time;
+                        node.storage(delivery_count<T>{}) += 1;
+                        m[x.first] = x.second;
+                    }
+                }
+                return m; });
         }
         //! @brief Export list for proc_stats.
         FUN_EXPORT proc_stats_t = export_list<message_log_type>;
@@ -208,6 +208,15 @@ namespace fcpp
         //! @brief Exports for the main function.
         FUN_EXPORT tree_message_t = export_list<spawn_profiler_t>;
 
+        FUN bool timeout(ARGS) { CODE
+            int t = counter(CALL);
+
+            bool to = t > node.storage(tags::hops{}) * timeout_coeff;
+
+            return to;
+        }
+        FUN_EXPORT timeout_t = export_list<int>;
+
         //! @brief Result type of spawn calls dispatching messages.
         using parametric_status_t = std::pair<devstatus, message>;
 
@@ -229,12 +238,9 @@ namespace fcpp
 
             switch (st) {
             case devstatus::IDLE:
-            {
                 // random message with 1% probability during time [1..50]
                 md = get_disco_message(CALL, node.storage(tags::devices{}));
-
                 break;
-            }
             case devstatus::DISCO:
                 break;
             case devstatus::OFFER:
@@ -281,20 +287,25 @@ namespace fcpp
                     parst.first = devstatus::SERVED;
                     // ASSUMPTION: if more than one candidate, get SERVED by first
                     parst.second = (*rtm.begin()).first;
+                } else if (timeout(CALL)) { // transition back to IDLE
+                    parst.first = devstatus::IDLE;                   
                 }
+
                 break;
             case devstatus::OFFER:
                 if (rtm.size()) { // transition to SERVING
                     parst.first = devstatus::SERVING;
                     // ASSUMPTION: if more than one candidate, SERVE the first
                     parst.second = (*rtm.begin()).first;
+                } else if (timeout(CALL)) { // transition back to IDLE
+                    parst.first = devstatus::IDLE;                   
                 }
                 break;
             default:
                 break;
             }
         }
-        FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t>;
+        FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t, timeout_t>;
 
         //! @brief Main case study function.
         MAIN() {
