@@ -10,7 +10,10 @@
 
 #include "lib/common/option.hpp"
 #include "lib/component/calculus.hpp"
+
 #include "lib/generals.hpp"
+#include "lib/termination.hpp"
+#include "lib/simulation_setup.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -53,15 +56,6 @@ namespace fcpp
 
             return sc;
         }
-
-        //! @brief Length of a round
-        constexpr size_t period = 1;
-
-        //! @brief Communication radius.
-        constexpr size_t comm = 100;
-
-        //! @brief Multiplier of hops for timeout (in rounds).
-        constexpr double timeout_coeff = 2;
 
         //! @brief Possibly generates a discovery message, given the number of devices.
         FUN common::option<message> get_disco_message(ARGS, size_t devices)
@@ -107,47 +101,6 @@ namespace fcpp
         }
         //! @brief Export list for proc_stats.
         FUN_EXPORT proc_stats_t = export_list<message_log_type>;
-
-        //! @brief Novel termination logic.
-        template <typename node_t, template <class> class T>
-        void termination_logic(ARGS, status &s, real_t v, message const &m, T<tags::ispp>)
-        {
-            bool terminating = s == status::terminated_output;
-            bool terminated = nbr(CALL, terminating, [&](field<bool> nt)
-                                  { return any_hood(CALL, nt) or terminating; });
-            bool source = m.from == node.uid;
-            double ds = monotonic_distance(CALL, source, node.nbr_dist());
-            double dt = monotonic_distance(CALL, source, node.nbr_lag());
-            bool slow = ds < v * comm / period * (dt - period);
-            if (terminated or slow)
-            {
-                if (s == status::terminated_output)
-                    s = status::border_output;
-                if (s == status::internal)
-                    s = status::border;
-            }
-        }
-        //! @brief Wave-like termination logic.
-        template <typename node_t, template <class> class T>
-        void termination_logic(ARGS, status &s, real_t v, message const &m, T<tags::wispp>)
-        {
-            bool terminating = s == status::terminated_output;
-            bool terminated = nbr(CALL, terminating, [&](field<bool> nt)
-                                  { return any_hood(CALL, nt) or terminating; });
-            bool source = m.from == node.uid and old(CALL, true, false);
-            double ds = monotonic_distance(CALL, source, node.nbr_dist());
-            double dt = monotonic_distance(CALL, source, node.nbr_lag());
-            bool slow = ds < v * comm / period * (dt - period);
-            if (terminated or slow)
-            {
-                if (s == status::terminated_output)
-                    s = status::border_output;
-                if (s == status::internal)
-                    s = status::border;
-            }
-        }
-        //! @brief Export list for termination_logic.
-        FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 
         //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
         GEN(T, G, S) message_log_type spawn_profiler(ARGS, T, G &&process, S &&key_set, real_t v, bool render) {

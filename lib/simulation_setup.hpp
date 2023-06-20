@@ -40,6 +40,12 @@ constexpr size_t end = 50;
 //! @brief Standard deviation for distance estimations.
 constexpr size_t dist_dev = 30;
 
+//! @brief Multiplier of hops for timeout (in rounds).
+constexpr double timeout_coeff = 2;
+
+//! @brief Number of service types.
+const size_t max_svc_id = 5;
+
 //! @brief Namespace for component options.
 namespace option {
 
@@ -96,6 +102,10 @@ constexpr size_t seed_max = std::min<uintmax_t>(std::numeric_limits<uint_fast32_
 //! @brief Shorthand for a constant numeric distribution.
 template <intmax_t num, intmax_t den = 1>
 using n = distribution::constant_n<double, num, den>;
+
+//! @brief Shorthand for a uniform numeric distribution.
+template <intmax_t max, intmax_t min=0>
+using nu = distribution::interval_n<double, min, max>;
 
 //! @brief Shorthand for an constant input distribution.
 template <typename T, typename R = double>
@@ -238,7 +248,10 @@ DECLARE_OPTIONS(list,
         left_color,                     color,
         right_color,                    color,
         node_size,                      double,
-        node_shape,                     shape
+        node_shape,                     shape,
+        num_svc_types,                  size_t,
+        offered_svc,                    size_t,
+        hops,                           size_t
     >,
     // the basic tags and corresponding aggregators to be logged
 #ifdef ALLPLOTS
@@ -262,7 +275,10 @@ DECLARE_OPTIONS(list,
         side,               i<side>,
         devices,            i<devices>,
         tvar,               functor::div<i<tvar>, n<100>>,
-        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>
+        tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>,
+        num_svc_types,      n<max_svc_id>,         
+        offered_svc,        nu<max_svc_id>,
+        hops,               i<hops>
     >,
     // general parameters to use for plotting
     extra_info<

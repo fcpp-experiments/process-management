@@ -31,6 +31,9 @@ constexpr size_t period = 1;
 //! @brief Communication radius.
 constexpr size_t comm = 100;
 
+//! @brief Multiplier of hops for timeout (in rounds).
+constexpr double timeout_coeff = 2;
+
 //! @brief Dimensionality of the space.
 constexpr size_t dim = 3;
 
