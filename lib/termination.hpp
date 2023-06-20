@@ -89,6 +89,67 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::wisp
 //! @brief Export list for termination_logic.
 FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 
+//! @brief Result type of spawn calls dispatching messages.
+using message_log_type = std::unordered_map<message, times_t>;
+
+
+//! @brief Computes stats on message delivery and active processes.
+GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T) {
+    // import tags for convenience
+    using namespace tags;
+    // stats on number of active processes
+    int proc_num = node.storage(proc_data{}).size() - 1;
+#ifdef ALLPLOTS
+    node.storage(max_proc<T>{}) = max(node.storage(max_proc<T>{}), proc_num);
+#endif
+    node.storage(tot_proc<T>{}) += proc_num;
+    // additional node rendering
+    if (render) {
+        if (proc_num > 0) node.storage(node_size{}) *= 1.5;
+        node.storage(node_color{})  = node.storage(proc_data{})[min(proc_num, 1)];
+        node.storage(left_color{})  = node.storage(proc_data{})[min(proc_num, 2)];
+        node.storage(right_color{}) = node.storage(proc_data{})[min(proc_num, 3)];
+    }
+    // stats on delivery success
+    old(node, call_point, message_log_type{}, [&](message_log_type m){
+        for (auto const& x : nm) {
+            if (m.count(x.first)) {
+#ifdef ALLPLOTS
+                node.storage(repeat_count<T>{}) += 1;
+#endif
+            } else {
+                node.storage(first_delivery_tot<T>{}) += x.second - x.first.time;
+                node.storage(delivery_count<T>{}) += 1;
+                m[x.first] = x.second;
+            }
+        }
+        return m;
+    });
+}
+//! @brief Export list for proc_stats.
+FUN_EXPORT proc_stats_t = export_list<message_log_type>;
+
+//! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
+GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render) {
+    // clear up stats data
+    node.storage(tags::proc_data{}).clear();
+    node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
+    // dispatches messages
+    message_log_type r = spawn(node, call_point, [&](message const& m){
+        auto r = process(m);
+        termination_logic(CALL, get<1>(r), v, m, T{});
+        real_t key = get<1>(r) == status::external ? 0.5 : 1;
+        node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
+        return r;
+    }, std::forward<S>(key_set));
+    // compute stats
+    proc_stats(CALL, r, render, T{});
+
+    return r;
+}
+//! @brief Export list for spawn_profiler.
+FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, proc_stats_t>;
+
 } // coordination
 
 } // fcpp
