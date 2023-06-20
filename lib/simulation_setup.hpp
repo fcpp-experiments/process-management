@@ -46,6 +46,9 @@ constexpr double timeout_coeff = 2;
 //! @brief Number of service types.
 const size_t max_svc_id = 5;
 
+//! @brief Maximum "file" size in number of messages.
+const size_t max_file_size = 10;
+
 //! @brief Namespace for component options.
 namespace option {
 

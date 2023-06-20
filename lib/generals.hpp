@@ -14,10 +14,11 @@
 
 //! @brief Types of messages
 enum class msgtype {
-    NONE,   // irrelevant
-    DISCO,  // service discovery message
-    OFFER,  // offer of service message
-    ACCEPT  // offer acceptance message
+    NONE,    // irrelevant
+    DISCO,   // service discovery message
+    OFFER,   // offer of service message
+    ACCEPT,  // offer acceptance message
+    DATA
 };
 
 //! @brief Struct representing a message.

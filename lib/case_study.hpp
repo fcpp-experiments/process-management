@@ -60,9 +60,9 @@ color status_color(const devstatus st, const size_t nproc)
 //! @brief Possibly generates a discovery message, given the number of devices.
 FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
-    // random message with 1% probability during time [1..50]
-    if (node.uid == devices - 1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0)
-    {
+
+    // random message with 1% probability
+    if (node.storage(tags::sent_count{}) == 0 && node.next_real() < 0.01) {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
@@ -70,60 +70,34 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     return m;
 }
 
-//! @brief Result type of spawn calls dispatching messages.
-using message_log_type = std::unordered_map<message, times_t>;
+//! @brief Simulates sending a file as a sequence of messages to another device.
+FUN common::option<message> send_file_seq(ARGS, fcpp::device_t to, int sz=1) { CODE
+    common::option<message> m;
 
-/*
-        //! @brief Computes stats on message delivery and active processes.
-        GEN(T) void proc_stats(ARGS, message_log_type const &nm, bool render, T) {
-            // import tags for convenience
-            using namespace tags;
-            // stats on number of active processes
-            int proc_num = node.storage(proc_data{}).size() - 1;
-            #ifdef ALLPLOTS
-                node.storage(max_proc<T>{}) = max(node.storage(max_proc<T>{}), proc_num);
-            #endif
-            node.storage(tot_proc<T>{}) += proc_num;
-            // stats on delivery success
-            old(node, call_point, message_log_type{}, [&](message_log_type m) {
-                for (auto const& x : nm) {
-                    if (m.count(x.first)) {
-                    #ifdef ALLPLOTS
-                        node.storage(repeat_count<T>{}) += 1;
-                    #endif
-                    } else {
-                        node.storage(first_delivery_tot<T>{}) += x.second - x.first.time;
-                        node.storage(delivery_count<T>{}) += 1;
-                        m[x.first] = x.second;
-                    }
-                }
-                return m; });
-        }
-        //! @brief Export list for proc_stats.
-        FUN_EXPORT proc_stats_t = export_list<message_log_type>;
+    int cnt = counter(CALL) + 1;
 
-        //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
-        GEN(T, G, S) message_log_type spawn_profiler(ARGS, T, G &&process, S &&key_set, real_t v, bool render) {
-            // dispatches messages
-            message_log_type r = spawn(node, call_point, [&](message const &m) {
-                    auto r = process(m);
-                    termination_logic(CALL, get<1>(r), v, m, T{});
-                    real_t key = get<1>(r) == status::external ? 0.5 : 1;
-                    node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
-                    return r; 
-                }, std::forward<S>(key_set));
-            
-            // compute stats
-            proc_stats(CALL, r, render, T{});
+    if (cnt <= sz) {
+        m.emplace(node.uid, to, node.current_time(), 0.0, 
+                  cnt < sz ? msgtype::DATA : msgtype::NONE, 
+                  node.next_int());
+    }
 
-            return r;
-        }
-        //! @brief Export list for spawn_profiler.
-        FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, status>, termination_logic_t, proc_stats_t>;
-*/
+    return m;
+}
+
+//! @brief Process that does a spherical broadcast of a message.
+GEN(T) message_log_type spherical_message(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+    message_log_type r = spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
+        status s = node.uid == m.to ? status::terminated_output : status::internal;
+        return make_tuple(node.current_time(), s);
+    }, m, node.storage(tags::infospeed{}), render);
+
+    return r;
+}
+FUN_EXPORT spherical_message_t = export_list<spawn_profiler_t>;
 
 //! @brief Process that does a spherical broadcast of a service request.
-FUN message_log_type spherical_discovery(ARGS, common::option<message> const &m, bool render = false) { CODE
+GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     message_log_type r = spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const &m) {
             status s = status::internal;
 
@@ -141,7 +115,7 @@ FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 using set_t = std::unordered_set<device_t>;
 
 //! @brief Sends a message over a tree topology.
-FUN message_log_type tree_message(ARGS, common::option<message> const &m, device_t parent, set_t const &below, bool render = false) { CODE
+GEN(T) message_log_type tree_message(ARGS, common::option<message> const& m, T, device_t parent, set_t const &below, bool render = false) { CODE
     message_log_type r = spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
@@ -175,11 +149,15 @@ using parametric_status_t = std::pair<devstatus, message>;
 
 //! @brief Manages behavior of devices with an automaton.
 FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
-    message_log_type rd, rtm;
+    // import tags for convenience
+    using namespace tags;
+
+    message_log_type rd, rtm, rdt;
     devstatus st = parst.first;
     message par = parst.second;
     common::option<message> md = common::option<message>{};
     common::option<message> mtm = common::option<message>{};
+    common::option<message> mdt = common::option<message>{};
 
     // spanning tree definition: aggregate computation of parent and below set
     device_t parent = flex_parent(CALL, false, comm);
@@ -212,15 +190,21 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::SERVING:
         if (parst.second.type == msgtype::ACCEPT) { // just transitioned
-            // TODO simulate communication
+            mdt = send_file_seq(CALL, parst.second.from);
         }
         break;
     default:
         break;
     }
 
-    rd = spherical_discovery(CALL, md, true);
-    rtm = tree_message(CALL, mtm, parent, below, true);
+    rd = spherical_discovery(CALL, md, wispp{});
+    rtm = tree_message(CALL, mtm, ispp{}, parent, below);
+    #ifndef NOTREE
+    rdt = tree_message(CALL, mdt, ispp{}, parent, below);
+    #endif
+    #ifndef NOSPHERE
+    rdt = spherical_message(CALL, mdt, wispp{});
+    #endif
 
     switch (st) {
     case devstatus::IDLE:
@@ -258,7 +242,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     }
 }
-FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t, timeout_t>;
+FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, spherical_message_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t, timeout_t>;
 
 //! @brief Main case study function.
 MAIN() {
