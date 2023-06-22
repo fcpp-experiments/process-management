@@ -46,7 +46,8 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
     common::option<message> m;
     // random message with 1% probability during time [10..50]
     if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
-        m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
+        // m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
+        m.emplace(node.uid, 100, node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -109,7 +110,7 @@ MAIN() {
 #ifndef NOSPHERE
     // tests spherical processes with legacy termination
     spherical_test(CALL, m, legacy{});
-    spherical_test(CALL, m, share{}, true);
+    spherical_test(CALL, m, share{});
     spherical_test(CALL, m, ispp{});
     spherical_test(CALL, m, wispp{});
 #endif
@@ -123,7 +124,7 @@ MAIN() {
     });
     // test tree processes with legacy termination
     tree_test(CALL, m, parent, below, legacy{});
-    tree_test(CALL, m, parent, below, share{});
+    tree_test(CALL, m, parent, below, share{}, true);
     tree_test(CALL, m, parent, below, ispp{});
     tree_test(CALL, m, parent, below, wispp{});
 #endif

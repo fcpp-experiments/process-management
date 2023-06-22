@@ -67,7 +67,7 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     // message just past time 10 from highest-id device
     if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
-        m.emplace(node.uid, 1, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
+        m.emplace(node.uid, 100, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -125,11 +125,6 @@ GEN(T) message_log_type tree_message(ARGS, common::option<message> const& m, T, 
             status s = node.uid == m.to ? status::terminated_output :
                     source_path or dest_path ? status::internal : status::external;
 
-            // if I requested the offered service, I reply by producing output
-            if (node.uid == m.to) {
-                s = status::internal_output;
-            }
-
             return make_tuple(node.current_time(), s); 
         }, m, 0.9, render);
 
@@ -163,7 +158,12 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     common::option<message> mdt = common::option<message>{};
 
     // spanning tree definition: aggregate computation of parent and below set
-    device_t parent = flex_parent(CALL, false, comm);
+    #ifdef NOTREE
+        bool is_src = false;
+    #else
+        bool is_src = node.uid == 0;
+    #endif
+    device_t parent = flex_parent(CALL, is_src, comm);
     set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
                                     {
                                         x.insert(y.begin(), y.end());
@@ -178,9 +178,10 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     case devstatus::DISCO:
         break;
     case devstatus::OFFER:
-        if (parst.second.type == msgtype::DISCO) { // just transitioned
+        if (parst.second.type == msgtype::DISCO) { // just transitioned: prepare message
             parst.second.type == msgtype::OFFER;
-            std::swap(parst.second.from, parst.second.to);
+            parst.second.to = parst.second.from; // from me to requester
+            parst.second.from = node.uid;
             mtm = parst.second;
         }
         break;
@@ -201,7 +202,9 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    // rtm = tree_message(CALL, mtm, ispp{}, parent, below);
+    rtm = tree_message(CALL, mtm, share{}, parent, below);
+    //rtm = tree_message(CALL, mtm, ispp{}, parent, below);
+
     // #ifndef NOTREE
     // rdt = tree_message(CALL, mdt, ispp{}, parent, below);
     // #endif
@@ -280,7 +283,7 @@ MAIN() {
         devstatus st = parst.first;
         int proc_num = node.storage(proc_data{}).size() - 1;
         node.storage(node_color{}) = status_color(st, proc_num);
-        if (proc_num > 0) node.storage(node_size{}) *= 1.5;
+        while (proc_num--) node.storage(node_size{}) *= 1.5;
 
         return parst; });
 }
