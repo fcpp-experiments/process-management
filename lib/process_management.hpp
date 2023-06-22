@@ -56,8 +56,8 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     // clear up stats data
-    node.storage(proc_data{}).clear();
-    node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
+    node.storage(tags::proc_data{}).clear();
+    node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
 
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
@@ -73,8 +73,8 @@ using set_t = std::unordered_set<device_t>;
 //! @brief Makes test for tree processes.
 GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, set_t const& below, T, bool render = false) { CODE
     // clear up stats data
-    node.storage(proc_data{}).clear();
-    node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
+    node.storage(tags::proc_data{}).clear();
+    node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
 
     spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m){
         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
