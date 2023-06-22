@@ -44,7 +44,7 @@ constexpr size_t dist_dev = 30;
 constexpr double timeout_coeff = 2;
 
 //! @brief Number of service types.
-const size_t max_svc_id = 5;
+const size_t max_svc_id = 100;
 
 //! @brief Maximum "file" size in number of messages.
 const size_t max_file_size = 10;

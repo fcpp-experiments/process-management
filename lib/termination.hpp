@@ -84,7 +84,6 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::wisp
     bool slow = ds < v * comm / period * (dt - period);
     if (terminated or slow) {
         if (s == status::terminated_output) s = status::border_output;
-        //if (s == status::internal || s == status::internal_output) s = status::border;
         if (s == status::internal) s = status::border;        
         if (s == status::internal_output) s = status::border_output;
     }
@@ -134,9 +133,6 @@ FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
 GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render) {
-    // clear up stats data
-    node.storage(tags::proc_data{}).clear();
-    node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
     // dispatches messages
     message_log_type r = spawn(node, call_point, [&](message const& m){
         auto r = process(m);

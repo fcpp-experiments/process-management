@@ -49,6 +49,9 @@ color status_color(const devstatus st, const size_t nproc)
     case devstatus::OFFER:
         sc = color(RED);
         break;
+    case devstatus::SERVED:
+        sc = color(SALMON);
+        break;
     default:
         sc = color(BLACK);
     }
@@ -62,9 +65,9 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
 
     // ***TODO*** --> set time to 10 
     // message just past time 10 from highest-id device
-    if (node.uid == devices-1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
+    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
-        m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
+        m.emplace(node.uid, 1, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -116,7 +119,7 @@ using set_t = std::unordered_set<device_t>;
 
 //! @brief Sends a message over a tree topology.
 GEN(T) message_log_type tree_message(ARGS, common::option<message> const& m, T, device_t parent, set_t const &below, bool render = false) { CODE
-    message_log_type r = spawn_profiler(CALL, tags::tree<tags::ispp>{}, [&](message const &m) {
+    message_log_type r = spawn_profiler(CALL, tags::tree<T>{}, [&](message const &m) {
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
             status s = node.uid == m.to ? status::terminated_output :
@@ -174,13 +177,13 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::DISCO:
         break;
-    // case devstatus::OFFER:
-    //     if (parst.second.type == msgtype::DISCO) { // just transitioned
-    //         parst.second.type == msgtype::OFFER;
-    //         std::swap(parst.second.from, parst.second.to);
-    //         mtm = parst.second;
-    //     }
-    //     break;
+    case devstatus::OFFER:
+        if (parst.second.type == msgtype::DISCO) { // just transitioned
+            parst.second.type == msgtype::OFFER;
+            std::swap(parst.second.from, parst.second.to);
+            mtm = parst.second;
+        }
+        break;
     // case devstatus::SERVED:
     //     if (parst.second.type == msgtype::OFFER) { // just transitioned
     //         parst.second.type == msgtype::ACCEPT;
