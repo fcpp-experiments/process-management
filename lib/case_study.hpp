@@ -78,7 +78,7 @@ FUN common::option<message> send_file_seq(ARGS, fcpp::device_t to, int sz=1) { C
 
     if (cnt <= sz) {
         m.emplace(node.uid, to, node.current_time(), 0.0, 
-                  cnt < sz ? msgtype::DATA : msgtype::NONE, 
+                  cnt < sz ? msgtype::DATA : msgtype::DATAEND, 
                   node.next_int());
     }
 
@@ -236,6 +236,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second = (*rtm.begin()).first;
         } else if (timeout(CALL)) { // transition back to IDLE
             parst.first = devstatus::IDLE;                   
+        }
+        break;
+    case devstatus::SERVING:
+        if (mdt.size()) { // if all file sent, transition back to IDLE
+            parst.first = devstatus::IDLE;
+        }
+        break;
+    case devstatus::SERVED:
+        if (rdt.size() and parst.second.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
+            parst.first = devstatus::IDLE;
         }
         break;
     default:

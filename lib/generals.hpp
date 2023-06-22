@@ -18,7 +18,8 @@ enum class msgtype {
     DISCO,   // service discovery message
     OFFER,   // offer of service message
     ACCEPT,  // offer acceptance message
-    DATA
+    DATA,    // chunck of file data
+    DATAEND  // end of data
 };
 
 //! @brief Struct representing a message.
@@ -44,8 +45,8 @@ struct message {
         from(from), to(to), time(time), data(data), type(msgtype::NONE), svc_type(0) {}
 
     //! @brief Member constructor.
-    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time, fcpp::real_t data, msgtype type, size_t svc_type) : 
-        from(from), to(to), time(time), data(data), type(type), svc_type(svc_type) {}
+    message(fcpp::device_t from, fcpp::device_t to, fcpp::times_t time, fcpp::real_t data, msgtype mtype, size_t stype) : 
+        from(from), to(to), time(time), data(data), type(mtype), svc_type(stype) {}
 
     //! @brief Equality operator.
     bool operator==(message const& m) const {
