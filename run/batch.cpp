@@ -11,7 +11,7 @@
 using namespace fcpp;
 
 //! @brief Number of identical runs to be averaged.
-constexpr int runs = 200;
+constexpr int runs = 1000;
 
 //! @brief Generates an arithmetic sequence of parameter values (or a default, if S corresponds).
 template <typename T, typename S>
