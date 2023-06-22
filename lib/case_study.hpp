@@ -39,16 +39,15 @@ color status_color(const devstatus st, const size_t nproc)
 {
     color sc;
 
-    switch (st)
-    {
+    switch (st) {
     case devstatus::IDLE:
         sc = (nproc ? color(GREEN) : color(WHITE));
         break;
     case devstatus::DISCO:
-        sc = color(RED);
+        sc = color(BLUE);
         break;
     case devstatus::OFFER:
-        sc = color(BLUE);
+        sc = color(RED);
         break;
     default:
         sc = color(BLACK);
@@ -61,8 +60,9 @@ color status_color(const devstatus st, const size_t nproc)
 FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
 
-    // random message with 1% probability
-    if (node.storage(tags::sent_count{}) == 0 && node.next_real() < 0.01) {
+    // ***TODO*** --> set time to 10 
+    // message just past time 10 from highest-id device
+    if (node.uid == devices-1 && node.current_time() > 1 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
@@ -98,7 +98,7 @@ FUN_EXPORT spherical_message_t = export_list<spawn_profiler_t>;
 
 //! @brief Process that does a spherical broadcast of a service request.
 GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const& m, T, bool render = false) { CODE
-    message_log_type r = spawn_profiler(CALL, tags::spherical<tags::wispp>{}, [&](message const &m) {
+    message_log_type r = spawn_profiler(CALL, tags::spherical<T>{}, [&](message const &m) {
             status s = status::internal;
 
             // if I offer a service matching the request, I reply by producing output
@@ -174,37 +174,37 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::DISCO:
         break;
-    case devstatus::OFFER:
-        if (parst.second.type == msgtype::DISCO) { // just transitioned
-            parst.second.type == msgtype::OFFER;
-            std::swap(parst.second.from, parst.second.to);
-            mtm = parst.second;
-        }
-        break;
-    case devstatus::SERVED:
-        if (parst.second.type == msgtype::OFFER) { // just transitioned
-            parst.second.type == msgtype::ACCEPT;
-            std::swap(parst.second.from, parst.second.to);
-            mtm = parst.second;
-        }
-        break;
-    case devstatus::SERVING:
-        if (parst.second.type == msgtype::ACCEPT) { // just transitioned
-            mdt = send_file_seq(CALL, parst.second.from);
-        }
-        break;
+    // case devstatus::OFFER:
+    //     if (parst.second.type == msgtype::DISCO) { // just transitioned
+    //         parst.second.type == msgtype::OFFER;
+    //         std::swap(parst.second.from, parst.second.to);
+    //         mtm = parst.second;
+    //     }
+    //     break;
+    // case devstatus::SERVED:
+    //     if (parst.second.type == msgtype::OFFER) { // just transitioned
+    //         parst.second.type == msgtype::ACCEPT;
+    //         std::swap(parst.second.from, parst.second.to);
+    //         mtm = parst.second;
+    //     }
+    //     break;
+    // case devstatus::SERVING:
+    //     if (parst.second.type == msgtype::ACCEPT) { // just transitioned
+    //         mdt = send_file_seq(CALL, parst.second.from);
+    //     }
+    //     break;
     default:
         break;
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, mtm, ispp{}, parent, below);
-    #ifndef NOTREE
-    rdt = tree_message(CALL, mdt, ispp{}, parent, below);
-    #endif
-    #ifndef NOSPHERE
-    rdt = spherical_message(CALL, mdt, wispp{});
-    #endif
+    // rtm = tree_message(CALL, mtm, ispp{}, parent, below);
+    // #ifndef NOTREE
+    // rdt = tree_message(CALL, mdt, ispp{}, parent, below);
+    // #endif
+    // #ifndef NOSPHERE
+    // rdt = spherical_message(CALL, mdt, wispp{});
+    // #endif
 
     switch (st) {
     case devstatus::IDLE:
@@ -229,25 +229,25 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         }
 
         break;
-    case devstatus::OFFER:
-        if (rtm.size()) { // transition to SERVING
-            parst.first = devstatus::SERVING;
-            // ASSUMPTION: if more than one candidate, SERVE the first
-            parst.second = (*rtm.begin()).first;
-        } else if (timeout(CALL)) { // transition back to IDLE
-            parst.first = devstatus::IDLE;                   
-        }
-        break;
-    case devstatus::SERVING:
-        if (mdt.size()) { // if all file sent, transition back to IDLE
-            parst.first = devstatus::IDLE;
-        }
-        break;
-    case devstatus::SERVED:
-        if (rdt.size() and parst.second.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
-            parst.first = devstatus::IDLE;
-        }
-        break;
+    // case devstatus::OFFER:
+    //     if (rtm.size()) { // transition to SERVING
+    //         parst.first = devstatus::SERVING;
+    //         // ASSUMPTION: if more than one candidate, SERVE the first
+    //         parst.second = (*rtm.begin()).first;
+    //     } else if (timeout(CALL)) { // transition back to IDLE
+    //         parst.first = devstatus::IDLE;                   
+    //     }
+    //     break;
+    // case devstatus::SERVING:
+    //     if (mdt.size()) { // if all file sent, transition back to IDLE
+    //         parst.first = devstatus::IDLE;
+    //     }
+    //     break;
+    // case devstatus::SERVED:
+    //     if (rdt.size() and parst.second.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
+    //         parst.first = devstatus::IDLE;
+    //     }
+    //     break;
     default:
         break;
     }
