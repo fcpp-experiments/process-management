@@ -141,9 +141,13 @@ namespace tags {
     template <typename T>
     struct avg_delay {};
 
-    //! @brief Total active processes per unit of time.
+    //! @brief Total active processes per unit of time (instant measure).
     template <typename T>
     struct avg_proc {};
+
+    //! @brief Total active processes per unit of time (averaged measure).
+    template <typename T>
+    struct avgtot_proc {};
 
 
     //! @brief The variance of round timing in the network.
