@@ -153,7 +153,8 @@ using test_store_t = tuple_store<
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
     avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<i<devices>>>
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<i<devices>>>,
+    avgtot_proc<T<S>>,  functor::div<functor::div<aggregator::sum<tot_proc<T<S>>, false>, distribution::constant<i<devices>>>, n<end>>
 >;
 
 //! @brief Overall options (aggregator, storage, functors) for given tests.
@@ -188,7 +189,7 @@ template <typename S, typename... Ts>
 using single_plot_t = plot::split<S, plot::join<Ts>...>;
 
 //! @brief Overall row of plots.
-template <typename S, size_t t0 = 0>
+template <typename S, bool is_time = std::is_same<S,plot::time>::value, size_t t0 = is_time ? 0 : end>
 using row_plot_t = plot::join<
 #ifdef ALLPLOTS
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<max_proc, aggregator::max<int>>>>,
@@ -196,7 +197,7 @@ using row_plot_t = plot::join<
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<repeat_count, aggregator::sum<size_t>>>>,
 #endif
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<delivery_count, aggregator::sum<size_t>>>>,
-    single_plot_t<S, lines_t<avg_proc, noaggr>>,
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, std::conditional_t<is_time, lines_t<avg_proc, noaggr>, lines_t<avgtot_proc, noaggr>>>>,
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<avg_delay, noaggr>>>
 >;
 
@@ -219,10 +220,10 @@ using multi_filter_t = typename multi_filter<plot::split<common::type_sequence<T
 //! @brief Overall plot document (one page for every variable).
 using plot_t = plot::join<
 #ifndef GRAPHICS
-    multi_filter_t<row_plot_t<tvar, 50>,   dens, hops, speed>,
-    multi_filter_t<row_plot_t<dens, 50>,   tvar, hops, speed>,
-    multi_filter_t<row_plot_t<hops, 50>,   tvar, dens, speed>,
-    multi_filter_t<row_plot_t<speed, 50>,  tvar, dens, hops>,
+    multi_filter_t<row_plot_t<tvar>,  dens, hops, speed>,
+    multi_filter_t<row_plot_t<dens>,  tvar, hops, speed>,
+    multi_filter_t<row_plot_t<hops>,  tvar, dens, speed>,
+    multi_filter_t<row_plot_t<speed>, tvar, dens, hops>,
 #endif
     multi_filter_t<row_plot_t<plot::time>, tvar, dens, hops, speed>
 >;

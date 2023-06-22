@@ -6,11 +6,13 @@ mkdir -p plot
 cp fcpp/src/extras/plotter/plot.asy plot/
 if [ "$1" == "plots" ]; then
     fcpp/src/make.sh run -O -DNOTREE batch
-    mv plot/batch.asy "plot/sphere batch.asy"
-    mv plot/batch.pdf "plot/sphere batch.pdf"
+    cat plot/batch.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/sphere batch.asy"
     fcpp/src/make.sh run -O -DNOSPHERE batch
-    mv plot/batch.asy "plot/tree batch.asy"
-    mv plot/batch.pdf "plot/tree batch.pdf"
+    cat plot/batch.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/tree batch.asy"
+    rm plot/batch.{asy,pdf}
+    cd plot
+    asy {sphere,tree}" batch.asy" -f pdf
+    cd ..
 elif [ "$1" == "window" ]; then
     fcpp/src/make.sh gui run -O -DNOTREE -DGRAPHICS graphic
     mv plot/graphic.asy "plot/sphere graphic.asy"
