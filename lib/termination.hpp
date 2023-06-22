@@ -68,7 +68,7 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::ispp
     if (terminated or slow) {
         if (s == status::terminated_output) s = status::border_output;
         if (s == status::internal) s = status::border;
-        if (s == status::internal_output) s == status::border_output;
+        if (s == status::internal_output) s = status::border_output;
     }
 }
 //! @brief Wave-like termination logic.
@@ -84,8 +84,9 @@ void termination_logic(ARGS, status& s, real_t v, message const& m, T<tags::wisp
     bool slow = ds < v * comm / period * (dt - period);
     if (terminated or slow) {
         if (s == status::terminated_output) s = status::border_output;
-        if (s == status::internal) s = status::border;
-        if (s == status::internal_output) s == status::border_output;
+        //if (s == status::internal || s == status::internal_output) s = status::border;
+        if (s == status::internal) s = status::border;        
+        if (s == status::internal_output) s = status::border_output;
     }
 }
 //! @brief Export list for termination_logic.
