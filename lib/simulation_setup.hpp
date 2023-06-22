@@ -169,7 +169,7 @@ struct noaggr {
 
 //! @brief Lines for a given data and test.
 template <template<class> class T, typename A, template<class> class P, typename... Ts>
-using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P<Ts>>>::tags::front>...>;
+using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P<Ts>>>::tags::front, aggregator::stats<double>>...>;
 
 //! @brief Lines for a given data and every test.
 template <template<class> class T, typename A>
