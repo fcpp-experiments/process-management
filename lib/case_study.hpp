@@ -15,6 +15,8 @@
 #include "lib/termination.hpp"
 #include "lib/simulation_setup.hpp"
 
+#include <iostream>
+
 /**
  * @brief Namespace containing all the objects in the FCPP library.
  */
@@ -51,6 +53,9 @@ color status_color(const devstatus st, const size_t nproc)
         break;
     case devstatus::SERVED:
         sc = color(SALMON);
+        break;
+    case devstatus::SERVING:
+        sc = color(BROWN);
         break;
     default:
         sc = color(BLACK);
@@ -170,6 +175,10 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
                                         return x; 
                                     });
 
+    // if (node.uid==311) {
+    //     std::cout << "status " << static_cast<std::underlying_type<devstatus>::type>(parst.first) << "msg type " << static_cast<std::underlying_type<msgtype>::type>(parst.second.type) << "\n";
+    // }
+
     switch (st) {
     case devstatus::IDLE:
         // random message with 1% probability during time [1..50]
@@ -178,20 +187,25 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     case devstatus::DISCO:
         break;
     case devstatus::OFFER:
-        if (parst.second.type == msgtype::DISCO) { // just transitioned: prepare message
-            parst.second.type == msgtype::OFFER;
+        if (parst.second.type == msgtype::DISCO) { // just transitioned: prepare offer message
+            parst.second.type = msgtype::OFFER;
+            //std::cout << node.uid << " <pre> OFFER: " << parst.second.from << " - " << parst.second.to << "\n";
             parst.second.to = parst.second.from; // from me to requester
+            parst.second.from = node.uid;
+            //std::cout << node.uid << " <post> OFFER: " << parst.second.from << " - " << parst.second.to << "\n";
+            mtm = parst.second;
+        }
+        break;
+    case devstatus::SERVED:
+        if (parst.second.type == msgtype::OFFER) { // just transitioned: prepare accept message
+            parst.second.type = msgtype::ACCEPT;
+            //std::swap(parst.second.from, parst.second.to);
+            std::cout << node.uid << " ACCEPT: " << parst.second.from << " - " << parst.second.to << "\n";
+            parst.second.to = parst.second.from;
             parst.second.from = node.uid;
             mtm = parst.second;
         }
         break;
-    // case devstatus::SERVED:
-    //     if (parst.second.type == msgtype::OFFER) { // just transitioned
-    //         parst.second.type == msgtype::ACCEPT;
-    //         std::swap(parst.second.from, parst.second.to);
-    //         mtm = parst.second;
-    //     }
-    //     break;
     // case devstatus::SERVING:
     //     if (parst.second.type == msgtype::ACCEPT) { // just transitioned
     //         mdt = send_file_seq(CALL, parst.second.from);
@@ -203,7 +217,6 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
 
     rd = spherical_discovery(CALL, md, wispp{});
     rtm = tree_message(CALL, mtm, share{}, parent, below);
-    //rtm = tree_message(CALL, mtm, ispp{}, parent, below);
 
     // #ifndef NOTREE
     // rdt = tree_message(CALL, mdt, ispp{}, parent, below);
@@ -235,15 +248,15 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         }
 
         break;
-    // case devstatus::OFFER:
-    //     if (rtm.size()) { // transition to SERVING
-    //         parst.first = devstatus::SERVING;
-    //         // ASSUMPTION: if more than one candidate, SERVE the first
-    //         parst.second = (*rtm.begin()).first;
-    //     } else if (timeout(CALL)) { // transition back to IDLE
-    //         parst.first = devstatus::IDLE;                   
-    //     }
-    //     break;
+    case devstatus::OFFER:
+        if (rtm.size()) { // transition to SERVING
+            parst.first = devstatus::SERVING;
+            // ASSUMPTION: if more than one candidate, SERVE the first
+            parst.second = (*rtm.begin()).first;
+        } else if (timeout(CALL)) { // transition back to IDLE
+            parst.first = devstatus::IDLE;                   
+        }
+        break;
     // case devstatus::SERVING:
     //     if (mdt.size()) { // if all file sent, transition back to IDLE
     //         parst.first = devstatus::IDLE;
