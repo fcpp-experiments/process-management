@@ -82,7 +82,7 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
 FUN common::option<message> send_file_seq(ARGS, fcpp::device_t to, int sz=1) { CODE
     common::option<message> m;
 
-    int cnt = counter(CALL) + 1;
+    int cnt = counter(CALL);
 
     if (cnt <= sz) {
         m.emplace(node.uid, to, node.current_time(), 0.0, 
@@ -200,17 +200,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         if (parst.second.type == msgtype::OFFER) { // just transitioned: prepare accept message
             parst.second.type = msgtype::ACCEPT;
             //std::swap(parst.second.from, parst.second.to);
-            std::cout << node.uid << " ACCEPT: " << parst.second.from << " - " << parst.second.to << "\n";
             parst.second.to = parst.second.from;
             parst.second.from = node.uid;
             mtm = parst.second;
         }
         break;
-    // case devstatus::SERVING:
-    //     if (parst.second.type == msgtype::ACCEPT) { // just transitioned
-    //         mdt = send_file_seq(CALL, parst.second.from);
-    //     }
-    //     break;
+    case devstatus::SERVING:
+        if (parst.second.type == msgtype::ACCEPT) { // just transitioned: start sending file
+            mdt = send_file_seq(CALL, parst.second.from);
+        }
+        break;
     default:
         break;
     }
@@ -218,12 +217,8 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     rd = spherical_discovery(CALL, md, wispp{});
     rtm = tree_message(CALL, mtm, share{}, parent, below);
 
-    // #ifndef NOTREE
-    // rdt = tree_message(CALL, mdt, ispp{}, parent, below);
-    // #endif
-    // #ifndef NOSPHERE
-    // rdt = spherical_message(CALL, mdt, wispp{});
-    // #endif
+    // another call for data transfer so we can use different termination type if we wish
+    rdt = tree_message(CALL, mdt, share{}, parent, below);
 
     switch (st) {
     case devstatus::IDLE:
@@ -257,16 +252,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.first = devstatus::IDLE;                   
         }
         break;
-    // case devstatus::SERVING:
-    //     if (mdt.size()) { // if all file sent, transition back to IDLE
-    //         parst.first = devstatus::IDLE;
-    //     }
-    //     break;
-    // case devstatus::SERVED:
-    //     if (rdt.size() and parst.second.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
-    //         parst.first = devstatus::IDLE;
-    //     }
-    //     break;
+    case devstatus::SERVING:
+        if (mdt.size()) { // if all file sent, transition back to IDLE
+            parst.first = devstatus::IDLE;
+        }
+        break;
+    case devstatus::SERVED:
+        if (rdt.size() and (*rdt.begin()).first.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
+            parst.first = devstatus::IDLE;
+        }
+        break;
     default:
         break;
     }
