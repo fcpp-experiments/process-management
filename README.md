@@ -144,3 +144,16 @@ Executing a graphical simulation will open a window displaying the simulation sc
 - any other key will show/hide a legenda displaying this list
 
 Hovering on a node will also display its UID in the top-left corner.
+
+## Case Study
+
+The essence of the Case Study (target ```case_study```) consists of the following scenario, based on a network of nodes:
+
+- when idle, a node _n_ may decide to broadcast a discovery message for a service _S_
+- each node _m_ offering service _S_ replies with an _offer_ (each node in the network implements exactly one service taken from a set {S1, ..., Sk})
+- if node _n_ does not receive an offer for service _S_ within a given interval, its wait times out and it returns to an idle state
+- the _first_ offer received by _n_ is accepted and an accept message is sent to its sender _m_; the other offers are _ignored_
+- upon the acceptance of its offer, node _m_ starts sending a _file_ (sequence) of _N_ data messages to node _n_, sending _one message per round_ (currently _N=1_)
+- after a given interval, the nodes whose offers are ignored time out and return to an idle state
+- after sending the last (only) message, _m_ returns to an idle state
+- after recognizing that it has received the last message, _n_ returns to an idle state
