@@ -161,3 +161,21 @@ The essence of the Case Study (target ```case_study```) consists of the followin
 Overall, the above steps are summarized by the following state machine:
 
 ![nodes-automa](https://github.com/fcpp-experiments/process-management/assets/1214215/65f1cbb6-2db8-42bf-b968-8de679e87d60)
+
+### Configuration
+
+The case study can be _configured_ through many settings:
+
+- basic settings in ```case_study.cpp```. These settings are the ones that are varied in the _systematic tests_.
+  - **dens** density of the network as avg number of neighbours
+  - **hops** network diameter
+  - **speed** maximum speed of devices as a percentage of the communication speed
+  - **tvar** variance of the round durations, as a percentage of the avg
+- further settings in  ```simulation_setup.hpp```. These settings are shared with the targets ```graphic``` and ```batch``` of the _systematic tests_.
+  - **period** avg duration of a round
+  - **comm** communication radius
+  - **end** end of simulated time
+  - **timeout_coeff** coefficient to be multiplied to **hops** to get the timeout value
+  - **max_svc_id** number _k_ of different services {S1,...,Sk}
+  - **max_file_size** maximum size (in messages) of the file sent by service to client (currently ***ignored*** since file size is fixed to _1_)
+ 
