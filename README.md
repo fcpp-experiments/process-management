@@ -157,3 +157,7 @@ The essence of the Case Study (target ```case_study```) consists of the followin
 - after a given interval, the nodes whose offers are ignored time out and return to an idle state
 - after sending the last (only) message, _m_ returns to an idle state
 - after recognizing that it has received the last message, _n_ returns to an idle state
+
+Overall, the above steps are summarized by the following state machine:
+
+![nodes-automa](https://github.com/fcpp-experiments/process-management/assets/1214215/65f1cbb6-2db8-42bf-b968-8de679e87d60)
