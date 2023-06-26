@@ -149,6 +149,22 @@ namespace tags {
     template <typename T>
     struct avgtot_proc {};
 
+    //! @brief The maximum size of messages exchanged for a certain process.
+    template <typename T>
+    struct max_msg_size {};
+
+    //! @brief The total size of messages exchanged for a certain process.
+    template <typename T>
+    struct tot_msg_size {};
+
+    //! @brief Total message size of processes per unit of time (instant measure).
+    template <typename T>
+    struct avg_size {};
+
+    //! @brief Total message size of processes per unit of time (averaged measure).
+    template <typename T>
+    struct avgtot_size {};
+
 
     //! @brief The variance of round timing in the network.
     struct tvar {};

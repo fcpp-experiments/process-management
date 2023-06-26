@@ -9,17 +9,23 @@ if [ "$1" == "plots" ]; then
     cat plot/batch.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/sphere batch.asy"
     fcpp/src/make.sh run -O -DNOSPHERE batch
     cat plot/batch.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/tree batch.asy"
+    fcpp/src/make.sh run -O -DNOSPHERE -DBLOOM batch
+    cat plot/batch.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/bloom batch.asy"
     rm plot/batch.{asy,pdf}
     cd plot
-    asy {sphere,tree}" batch.asy" -f pdf
+    asy {sphere,tree,bloom}" batch.asy" -f pdf
     cd ..
 elif [ "$1" == "window" ]; then
     fcpp/src/make.sh gui run -O -DNOTREE -DGRAPHICS graphic
-    mv plot/graphic.asy "plot/sphere graphic.asy"
-    mv plot/graphic.pdf "plot/sphere graphic.pdf"
+    cat plot/graphic.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/sphere graphic.asy"
     fcpp/src/make.sh gui run -O -DNOSPHERE -DGRAPHICS graphic
-    mv plot/graphic.asy "plot/tree graphic.asy"
-    mv plot/graphic.pdf "plot/tree graphic.pdf"
+    cat plot/graphic.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/tree graphic.asy"
+    fcpp/src/make.sh gui run -O -DNOSPHERE -DBLOOM -DGRAPHICS graphic
+    cat plot/graphic.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/bloom graphic.asy"
+    rm plot/graphic.{asy,pdf}
+    cd plot
+    asy {sphere,tree,bloom}" graphic.asy" -f pdf
+    cd ..
 else
     if [ "$1" == "" ]; then
         echo -e "\033[4msimplified usage:\033[0m"

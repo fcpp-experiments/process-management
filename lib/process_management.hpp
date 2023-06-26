@@ -54,6 +54,10 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
 }
 
 
+//! @brief Message bytes overhead fixed and per process due to the propagation shape.
+template <template<class> class T>
+class topological_overhead;
+
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     // clear up stats data
@@ -63,16 +67,13 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
-    }, m, node.storage(tags::infospeed{}), render);
+    }, m, node.storage(tags::infospeed{}), render, 0, 0);
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
 
 
-//! @brief The type for a set of devices.
-using set_t = std::unordered_set<device_t>;
-
 //! @brief Makes test for tree processes.
-GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, set_t const& below, T, bool render = false) { CODE
+GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, S const& below, size_t set_size, T, bool render = false) { CODE
     // clear up stats data
     node.storage(tags::proc_data{}).clear();
     node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
@@ -83,11 +84,19 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, device_t parent, s
         status s = node.uid == m.to ? status::terminated_output :
                    source_path or dest_path ? status::internal : status::external;
         return make_tuple(node.current_time(), s);
-    }, m, 0.9, render);
+    }, m, 0.9, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
 }
 //! @brief Exports for the main function.
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
 
+
+#ifdef BLOOM
+//! @brief The type for a set of devices.
+using set_t = bloom_filter<2,128>;
+#else
+//! @brief The type for a set of devices.
+using set_t = std::unordered_set<device_t>;
+#endif
 
 //! @brief Main case study function.
 MAIN() {
@@ -119,14 +128,20 @@ MAIN() {
     device_t parent = flex_parent(CALL, is_src, comm);
     // routing sets along the tree
     set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const& y){
+#ifdef BLOOM
+        x.insert(y);
+#else
         x.insert(y.begin(), y.end());
+#endif
         return x;
     });
+    common::osstream os;
+    os << below;
     // test tree processes with legacy termination
-    tree_test(CALL, m, parent, below, legacy{});
-    tree_test(CALL, m, parent, below, share{}, true);
-    tree_test(CALL, m, parent, below, ispp{});
-    tree_test(CALL, m, parent, below, wispp{});
+    tree_test(CALL, m, parent, below, os.size(), legacy{});
+    tree_test(CALL, m, parent, below, os.size(), share{}, true);
+    tree_test(CALL, m, parent, below, os.size(), ispp{});
+    tree_test(CALL, m, parent, below, os.size(), wispp{});
 #endif
 }
 //! @brief Exports for the main function.
