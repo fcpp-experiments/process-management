@@ -182,5 +182,11 @@ The case study can be _configured_ through many settings:
 
 ### Restrictions
 
+The following are current restrictions to the scenario that may be lifted in future versions.
+
+- at any round, each device is in exactly one of the poassible states _IDLE_, _DISCO_, _OFFER_, _SERVED_, _SERVING_ of the above state machine. This means that a device that is, e.g., *OFFER*-ing its service cannot at the same being _SERVING_ some previous request, etc.
+- only _one discovery message_ is actually generated during the _whole use case execution_. The request is created by the device with id _(N-1)_ (where _N_ is the number of devices) at time (round) _T=11_ (this delay has the purpose to let the tree topology computation stabilize)
+- the offer accepted is always the first one received by a device in the _DISCO_ state; in case two or more offers are received at the same time by a device in _DISCO_ state, one of them is arbitrarily chosen to be accepted
+- the file sent by a service after its offer has been accepted has a length of exactly _1 message_
  
 ### Statistics
