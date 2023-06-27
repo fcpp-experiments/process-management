@@ -122,6 +122,7 @@ The possible targets are:
 - `all` (for running all targets)
 - `batch` (produces plots) runs a batch of experiments of process management
 - `graphic` (with GUI, produces plots) runs a graphic process management experiment based on the provided parameters
+- `use_case` (with GUI, produces plots) runs a more complex process management use case described below
 
 Running the above command, you should see output about building the executables and running them, graphical simulations should pop up (if there are any in the targets), PDF plots should be produced in the `plot/` directory (if any are produced by the targets), and the textual output will be saved in the `output/` directory.
 
@@ -178,4 +179,8 @@ The case study can be _configured_ through many settings:
   - **timeout_coeff** coefficient to be multiplied to **hops** to get the timeout value
   - **max_svc_id** number _k_ of different services {S1,...,Sk}
   - **max_file_size** maximum size (in messages) of the file sent by service to client (currently ***ignored*** since file size is fixed to _1_)
+
+### Restrictions
+
  
+### Statistics
