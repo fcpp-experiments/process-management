@@ -112,7 +112,7 @@ using message_log_type = std::unordered_map<message, times_t>;
 
 
 //! @brief Computes stats on message delivery and active processes.
-GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T, size_t base_overhead, size_t variable_overhead) {
+GEN(T) void proc_stats(ARGS, message_log_type const& nm, int render, T, size_t base_overhead, size_t variable_overhead) {
     // import tags for convenience
     using namespace tags;
     // stats on number of active processes
@@ -123,11 +123,11 @@ GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T, size_t 
     node.storage(max_msg_size<T>{}) = max(node.storage(max_msg_size<T>{}), ms);
     node.storage(tot_msg_size<T>{}) += ms;
     // additional node rendering
-    if (render) {
-        if (proc_num > 0) node.storage(node_size{}) *= 1.5;
-        node.storage(node_color{})  = node.storage(proc_data{})[min(proc_num, 1)];
-        node.storage(left_color{})  = node.storage(proc_data{})[min(proc_num, 2)];
-        node.storage(right_color{}) = node.storage(proc_data{})[min(proc_num, 3)];
+    if (render >= 0) {
+        if (proc_num > 0) node.storage(node_size{}) *= 1.2;
+        if (render == 0) node.storage(node_color{})  = node.storage(proc_data{}).back();
+        if (render == 1) node.storage(left_color{})  = node.storage(proc_data{}).back();
+        if (render == 2) node.storage(right_color{}) = node.storage(proc_data{}).back();
     }
     // stats on delivery success
     old(node, call_point, message_log_type{}, [&](message_log_type m){
@@ -147,7 +147,7 @@ GEN(T) void proc_stats(ARGS, message_log_type const& nm, bool render, T, size_t 
 FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
-GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool render, size_t base_overhead, size_t variable_overhead) {
+GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, int render, size_t base_overhead, size_t variable_overhead) {
     // dispatches messages
     message_log_type r = spawn(node, call_point, [&](message const& m){
         auto r = process(m);

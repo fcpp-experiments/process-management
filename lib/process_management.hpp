@@ -67,7 +67,7 @@ template <template<class> class T>
 class topological_overhead;
 
 //! @brief Makes test for spherical processes.
-GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, int render = -1) { CODE
     // clear up stats data
     node.storage(tags::proc_data{}).clear();
     node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
@@ -81,7 +81,7 @@ FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
 
 
 //! @brief Makes test for tree processes.
-GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, S const& below, size_t set_size, T, bool render = false) { CODE
+GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, S const& below, size_t set_size, T, int render = -1) { CODE
     // clear up stats data
     node.storage(tags::proc_data{}).clear();
     node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
@@ -131,9 +131,9 @@ MAIN() {
 #ifndef NOSPHERE
     // tests spherical processes with legacy termination
     spherical_test(CALL, m, legacy{});
-    spherical_test(CALL, m, share{});
-    spherical_test(CALL, m, ispp{});
-    spherical_test(CALL, m, wispp{});
+    spherical_test(CALL, m, share{}, 0); // central color
+    spherical_test(CALL, m, ispp{},  1); // left color
+    spherical_test(CALL, m, wispp{}, 2); // right color
 #endif
 #ifndef NOTREE
     // spanning tree definition
@@ -151,9 +151,9 @@ MAIN() {
     os << below;
     // test tree processes with legacy termination
     tree_test(CALL, m, parent, below, os.size(), legacy{});
-    tree_test(CALL, m, parent, below, os.size(), share{}, true);
-    tree_test(CALL, m, parent, below, os.size(), ispp{});
-    tree_test(CALL, m, parent, below, os.size(), wispp{});
+    tree_test(CALL, m, parent, below, os.size(), share{}, 0); // central color
+    tree_test(CALL, m, parent, below, os.size(), ispp{},  1); // left color
+    tree_test(CALL, m, parent, below, os.size(), wispp{}, 2); // right color
 #endif
 }
 //! @brief Exports for the main function.
