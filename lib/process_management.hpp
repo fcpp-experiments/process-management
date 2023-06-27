@@ -41,13 +41,21 @@ spawn(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... x
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
+//! @brief The root of the communication tree in the network.
+constexpr device_t message_root = 0;
+
+//! @brief The device sending the message.
+constexpr device_t message_sender = 1;
+
+//! @brief The device receiving the message.
+constexpr device_t message_receiver = 2;
+
+
 //! @brief Possibly generates a message, given the number of devices and the experiment tag.
-FUN common::option<message> get_message(ARGS, size_t devices) {
+FUN common::option<message> get_message(ARGS) {
     common::option<message> m;
-    // random message with 1% probability during time [10..50]
-    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
-        // m.emplace(node.uid, (device_t)node.next_int(devices-1), node.current_time(), node.next_real());
-        m.emplace(node.uid, 100, node.current_time(), node.next_real());
+    if (node.uid == message_sender && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+        m.emplace(node.uid, message_receiver, node.current_time(), node.next_real());
         node.storage(tags::sent_count{}) += 1;
     }
     return m;
@@ -102,20 +110,24 @@ using set_t = std::unordered_set<device_t>;
 MAIN() {
     // import tags for convenience
     using namespace tags;
-    // random walk
-    size_t l = node.storage(side{});
-    rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
     // basic node rendering
 #ifdef NOTREE
     bool is_src = false;
 #else
-    bool is_src = node.uid == 0;
+    bool is_src = node.uid == message_root;
 #endif
-    bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
-    node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
-    node.storage(node_size{}) = highlight ? 20 : 10;
-    // random message with 1% probability during time [10..50]
-    common::option<message> m = get_message(CALL, node.storage(devices{}));
+    bool highlight = is_src or node.uid == message_sender or node.uid == message_receiver;
+    node.storage(node_shape{}) = is_src ? shape::star : node.uid == message_receiver ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
+    node.storage(node_size{}) = is_src ? 30 : highlight ? 20 : 10;
+    // random walk
+    size_t l = node.storage(side{});
+    if (highlight) {
+        if (is_src) node.position() = make_vec(l/2, l/2, 20);
+        if (node.uid == message_sender) node.position() = make_vec(l/4, l/4, 20);
+        if (node.uid == message_receiver) node.position() = make_vec(3*l/4, 3*l/4, 20);
+    } else rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
+    // standard message from message_sender to message_receiver after time 10
+    common::option<message> m = get_message(CALL);
 #ifndef NOSPHERE
     // tests spherical processes with legacy termination
     spherical_test(CALL, m, legacy{});
