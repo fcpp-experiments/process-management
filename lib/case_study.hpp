@@ -93,18 +93,18 @@ FUN common::option<message> send_file_seq(ARGS, fcpp::device_t to, int sz=1) { C
 }
 
 //! @brief Process that does a spherical broadcast of a message.
-GEN(T) message_log_type spherical_message(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+GEN(T) message_log_type spherical_message(ARGS, common::option<message> const& m, T, int render = -1) { CODE
     message_log_type r = spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
-    }, m, node.storage(tags::infospeed{}), render);
+    }, m, node.storage(tags::infospeed{}), render, 0, 0);
 
     return r;
 }
 FUN_EXPORT spherical_message_t = export_list<spawn_profiler_t>;
 
 //! @brief Process that does a spherical broadcast of a service request.
-GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const& m, T, int render = -1) { CODE
     message_log_type r = spawn_profiler(CALL, tags::spherical<T>{}, [&](message const &m) {
             status s = status::internal;
 
@@ -112,17 +112,14 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
             if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
             return make_tuple(node.current_time(), s); 
-        }, m, node.storage(tags::infospeed{}), render);
+        }, m, node.storage(tags::infospeed{}), render, 0, 0);
 
     return r;
 }
 FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
-//! @brief The type for a set of devices.
-using set_t = std::unordered_set<device_t>;
-
 //! @brief Sends a message over a tree topology.
-GEN(T) message_log_type tree_message(ARGS, common::option<message> const& m, T, device_t parent, set_t const &below, bool render = false) { CODE
+GEN(T,S) message_log_type tree_message(ARGS, common::option<message> const& m, T, device_t parent, S const &below, size_t set_size, int render = -1) { CODE
     message_log_type r = spawn_profiler(CALL, tags::tree<T>{}, [&](message const &m) {
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
@@ -130,7 +127,7 @@ GEN(T) message_log_type tree_message(ARGS, common::option<message> const& m, T, 
                     source_path or dest_path ? status::internal : status::external;
 
             return make_tuple(node.current_time(), s); 
-        }, m, 0.9, render);
+        }, m, 0.9, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
 
     return r;
 }
@@ -148,6 +145,14 @@ FUN_EXPORT timeout_t = export_list<int>;
 
 //! @brief Result type of spawn calls dispatching messages.
 using parametric_status_t = std::pair<devstatus, message>;
+
+#ifdef BLOOM
+//! @brief The type for a set of devices.
+using set_t = bloom_filter<2,128>;
+#else
+//! @brief The type for a set of devices.
+using set_t = std::unordered_set<device_t>;
+#endif
 
 //! @brief Manages behavior of devices with an automaton.
 FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
@@ -170,9 +175,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     device_t parent = flex_parent(CALL, is_src, comm);
     set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
                                     {
-                                        x.insert(y.begin(), y.end());
+                                        #ifdef BLOOM
+                                            x.insert(y);
+                                        #else
+                                            x.insert(y.begin(), y.end());
+                                        #endif
                                         return x; 
                                     });
+
+    common::osstream os;
+    os << below;
 
     switch (st) {
     case devstatus::IDLE:
@@ -207,10 +219,10 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, mtm, share{}, parent, below);
+    rtm = tree_message(CALL, mtm, share{}, parent, below, os.size());
 
     // another call for data transfer so we can use different termination type if we wish
-    rdt = tree_message(CALL, mdt, share{}, parent, below);
+    rdt = tree_message(CALL, mdt, share{}, parent, below, os.size());
 
     switch (st) {
     case devstatus::IDLE:
