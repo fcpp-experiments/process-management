@@ -13,7 +13,7 @@
 
 #include "lib/generals.hpp"
 #include "lib/termination.hpp"
-#include "lib/simulation_setup.hpp"
+#include "lib/case_study_setup.hpp"
 
 #include <iostream>
 
@@ -219,10 +219,10 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, mtm, share{}, parent, below, os.size());
+    rtm = tree_message(CALL, mtm, ispp{}, parent, below, os.size());
 
     // another call for data transfer so we can use different termination type if we wish
-    rdt = tree_message(CALL, mdt, share{}, parent, below, os.size());
+    rdt = tree_message(CALL, mdt, ispp{}, parent, below, os.size());
 
     switch (st) {
     case devstatus::IDLE:

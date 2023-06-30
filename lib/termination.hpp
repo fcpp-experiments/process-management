@@ -11,7 +11,7 @@
 #include "lib/option/distribution.hpp"
 
 #include "lib/generals.hpp"
-#include "lib/simulation_setup.hpp"
+#include "lib/common_setup.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.

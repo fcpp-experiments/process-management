@@ -111,11 +111,12 @@ MAIN() {
     // import tags for convenience
     using namespace tags;
     // basic node rendering
-#ifdef NOTREE
-    bool is_src = false;
-#else
-    bool is_src = node.uid == message_root;
-#endif
+    #ifdef NOTREE
+        bool is_src = false;
+    #else
+        bool is_src = node.uid == message_root;
+    #endif
+
     bool highlight = is_src or node.uid == message_sender or node.uid == message_receiver;
     node.storage(node_shape{}) = is_src ? shape::star : node.uid == message_receiver ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
     node.storage(node_size{}) = is_src ? 30 : highlight ? 20 : 10;
