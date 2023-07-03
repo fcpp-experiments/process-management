@@ -156,6 +156,23 @@ Hovering on a node will also display its UID in the top-left corner.
 
 - **TODO:** describe graphical notation
 
+#### Parameters (cf. plots)
+
+- **dens** density of the network as avg number of neighbours
+- **hops** network diameter
+- **speed** maximum speed of devices as a percentage of the communication speed
+- **tvar** variance of the round durations, as a percentage of the avg
+
+#### Metrics (cf. plots)
+
+- `dcount` (delivery count): % of messages that arrived to destination 
+- `aproc` (average processes): average number of process instances (i.e., for a single process, the average number of devices running it)
+- `asiz` (average size) 
+- `mmsiz` (max message dize)
+- `adel` (average delay)
+
+See also the namespace `tag` in file `lib/generals.hpp` (where, e.g., struct `max_msg_size` turns into extracted metric `mmsize`).
+
 ### Case Study
 
 ```./make.sh gui run -O -DNOSPHERE case_study```
@@ -207,3 +224,4 @@ The following are current restrictions to the scenario that may be lifted in fut
 - the file sent by a service after its offer has been accepted has a length of exactly _1 message_
  
 #### Statistics
+
