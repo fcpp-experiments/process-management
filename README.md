@@ -146,7 +146,20 @@ Executing a graphical simulation will open a window displaying the simulation sc
 
 Hovering on a node will also display its UID in the top-left corner.
 
-## Case Study
+## Simulations
+
+### Graphic 
+
+```./make.sh window```
+
+#### Graphical description
+
+- **TODO:** describe graphical notation
+
+### Case Study
+
+```./make.sh gui run -O -DNOSPHERE case_study```
+
 
 The essence of the Case Study (target ```case_study```) consists of the following scenario, based on a network of nodes:
 
@@ -163,7 +176,11 @@ Overall, the above steps are summarized by the following state machine:
 
 ![nodes-automa](https://github.com/fcpp-experiments/process-management/assets/1214215/65f1cbb6-2db8-42bf-b968-8de679e87d60)
 
-### Configuration
+#### Graphical description
+
+- **TODO:** describe graphical notation
+
+#### Configuration
 
 The case study can be _configured_ through many settings:
 
@@ -180,7 +197,7 @@ The case study can be _configured_ through many settings:
   - **max_svc_id** number _k_ of different services {S1,...,Sk}
   - **max_file_size** maximum size (in messages) of the file sent by service to client (currently ***ignored*** since file size is fixed to _1_)
 
-### Restrictions
+#### Restrictions
 
 The following are current restrictions to the scenario that may be lifted in future versions.
 
@@ -189,4 +206,4 @@ The following are current restrictions to the scenario that may be lifted in fut
 - the offer accepted is always the first one received by a device in the _DISCO_ state; in case two or more offers are received at the same time by a device in _DISCO_ state, one of them is arbitrarily chosen to be accepted
 - the file sent by a service after its offer has been accepted has a length of exactly _1 message_
  
-### Statistics
+#### Statistics
