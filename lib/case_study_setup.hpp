@@ -5,8 +5,8 @@
  * @brief Simulation setup for the process management case study.
  */
 
-#ifndef FCPP_SIMULATION_SETUP_H_
-#define FCPP_SIMULATION_SETUP_H_
+#ifndef FCPP_CASE_STUDY_SETUP_H_
+#define FCPP_CASE_STUDY_SETUP_H_
 
 #include "lib/fcpp.hpp"
 #include "lib/generals.hpp"
@@ -21,18 +21,6 @@ namespace fcpp {
 //! @brief Namespace for component options.
 namespace option {
 
-//! @brief Aggregators for a given test.
-template <template<class> class T, typename S>
-using test_aggr_t = aggregators<
-    max_proc<T<S>>,            aggregator::max<int>,
-    repeat_count<T<S>>,        aggregator::sum<size_t>,
-    max_msg_size<T<S>>,        aggregator::max<size_t>,
-    tot_msg_size<T<S>>,        aggregator::sum<size_t>,
-    tot_proc<T<S>>,            aggregator::sum<int>,
-    first_delivery_tot<T<S>>,  aggregator::sum<times_t>,
-    delivery_count<T<S>>,      aggregator::sum<size_t>
->;
-
 //! @brief Storage for a given test.
 template <template<class> class T, typename S>
 using test_store_t = tuple_store<
@@ -44,22 +32,6 @@ using test_store_t = tuple_store<
     first_delivery_tot<T<S>>,  times_t,
     delivery_count<T<S>>,      size_t
 >;
-
-//! @brief Functors for a given test.
-template <template<class> class T, typename S>
-using test_func_t = log_functors<
-    avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
-    avg_size<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_msg_size<T<S>>, false>>, distribution::constant<i<devices>>>,
-    avgtot_size<T<S>>,  functor::div<functor::div<aggregator::sum<tot_msg_size<T<S>>, false>, distribution::constant<i<devices>>>, n<end>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<i<devices>>>,
-    avgtot_proc<T<S>>,  functor::div<functor::div<aggregator::sum<tot_proc<T<S>>, false>, distribution::constant<i<devices>>>, n<end>>
->;
-
-//! @brief Dummy aggregator for functor tags.
-struct noaggr {
-    template <typename A>
-    using result_type = common::tagged_tuple_t<A, A>;
-};
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
@@ -127,4 +99,4 @@ DECLARE_OPTIONS(list,
 
 }
 
-#endif // FCPP_SIMULATION_SETUP_H_
+#endif // FCPP_CASE_STUDY_SETUP_H_
