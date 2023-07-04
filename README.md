@@ -122,7 +122,7 @@ The possible targets are:
 - `all` (for running all targets)
 - `batch` (produces plots) runs a batch of experiments of process management
 - `graphic` (with GUI, produces plots) runs a graphic process management experiment based on the provided parameters
-- `use_case` (with GUI, produces plots) runs a more complex process management use case described below
+- `case_study` (with GUI, produces plots) runs a more complex process management use case described below
 
 Running the above command, you should see output about building the executables and running them, graphical simulations should pop up (if there are any in the targets), PDF plots should be produced in the `plot/` directory (if any are produced by the targets), and the textual output will be saved in the `output/` directory.
 
@@ -175,7 +175,7 @@ See also the namespace `tag` in file `lib/generals.hpp` (where, e.g., struct `ma
 
 ### Case Study
 
-```./make.sh gui run -O -DNOSPHERE case_study```
+```./make.sh gui run -O [-DBLOOM] case_study```
 
 
 The essence of the Case Study (target ```case_study```) consists of the following scenario, based on a network of nodes:
