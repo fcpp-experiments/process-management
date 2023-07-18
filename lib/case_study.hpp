@@ -109,6 +109,7 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
             status s = status::internal;
 
             // if I offer a service matching the request, I reply by producing output
+//            if (node.uid==55 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
             if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
             return make_tuple(node.current_time(), s); 
@@ -123,11 +124,14 @@ GEN(T,S) message_log_type tree_message(ARGS, common::option<message> const& m, T
     message_log_type r = spawn_profiler(CALL, tags::tree<T>{}, [&](message const &m) {
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
-            status s = node.uid == m.to ? status::terminated_output :
+//            status s = m.to == node.uid && (node.uid == 577 || node.uid == 55) ?
+//            status s = m.to == node.uid && (node.uid == 55) ?
+            status s = m.to == node.uid ?  
+                    status::terminated_output :
                     source_path or dest_path ? status::internal : status::external;
 
             return make_tuple(node.current_time(), s); 
-        }, m, 0.9, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
+        }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
 
     return r;
 }

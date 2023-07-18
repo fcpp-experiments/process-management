@@ -35,13 +35,13 @@ constexpr size_t comm = 100;
 constexpr size_t dim = 3;
 
 //! @brief End of simulated time.
-constexpr size_t end = 50;
+constexpr size_t end = 100;
 
 //! @brief Standard deviation for distance estimations.
 constexpr size_t dist_dev = 30;
 
 //! @brief Multiplier of hops for timeout (in rounds).
-constexpr double timeout_coeff = 2;
+constexpr double timeout_coeff = 1;
 
 //! @brief Number of service types.
 const size_t max_svc_id = 100;

@@ -216,6 +216,10 @@ namespace tags {
 
     //! @brief Service(s) offered by the current node.
     struct offered_svc {};
+
+    //! @brief Quality of offered service in interval [0,1).
+    struct svc_rank {};
+
 } // tags
 
 

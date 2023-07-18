@@ -153,8 +153,6 @@ DECLARE_OPTIONS(list,
         right_color,                    color,
         node_size,                      double,
         node_shape,                     shape,
-        num_svc_types,                  size_t,
-        offered_svc,                    size_t,
         hops,                           size_t
     >,
     // the basic tags and corresponding aggregators to be logged
@@ -178,8 +176,6 @@ DECLARE_OPTIONS(list,
         devices,            i<devices>,
         tvar,               functor::div<i<tvar>, n<100>>,
         tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>,
-        num_svc_types,      n<max_svc_id>,         
-        offered_svc,        nu<max_svc_id>,
         hops,               i<hops>
     >,
     // general parameters to use for plotting
