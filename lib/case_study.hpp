@@ -120,7 +120,33 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
 FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
 //! @brief Sends a message over a tree topology.
-GEN(T,S) message_log_type tree_message(ARGS, common::option<message> const& m, T, device_t parent, S const &below, size_t set_size, int render = -1) { CODE
+GEN(T,S) message_log_type tree_message(ARGS, common::option<device_t> const& k, common::option<message> const& m, T, device_t parent, S const &below, size_t set_size, int render = -1) { CODE
+    message_log_type r = spawn(CALL, 
+        [&](message const& m){
+            auto r = process(m);
+            termination_logic(CALL, get<1>(r), v, m, T{});
+            real_t key = get<1>(r) == status::external ? 0.5 : 1;
+            node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
+            return r;
+        }, std::forward<S>(key_set));
+        
+    // tags::tree<T>{}, [&](message const &m) {
+    //         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
+    //         bool dest_path = below.count(m.to) > 0;
+    //         status s = m.to == node.uid ?  
+    //                 status::terminated_output :
+    //                 source_path or dest_path ? status::internal : status::external;
+
+    //         return make_tuple(node.current_time(), s); 
+    //     }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
+
+    return r;
+}
+//! @brief Exports for the main function.
+FUN_EXPORT tree_message_t = export_list<spawn_profiler_t>;
+
+// TODO ***UNIFY WITH tree_message***
+GEN(T,S) message_log_type tree_message_data(ARGS, common::option<message> const& m, T, device_t parent, S const &below, size_t set_size, int render = -1) { CODE
     message_log_type r = spawn_profiler(CALL, tags::tree<T>{}, [&](message const &m) {
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
@@ -135,8 +161,6 @@ GEN(T,S) message_log_type tree_message(ARGS, common::option<message> const& m, T
 
     return r;
 }
-//! @brief Exports for the main function.
-FUN_EXPORT tree_message_t = export_list<spawn_profiler_t>;
 
 FUN bool timeout(ARGS) { CODE
     int t = counter(CALL);
@@ -167,8 +191,10 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     devstatus st = parst.first;
     message par = parst.second;
     common::option<message> md = common::option<message>{};
+    common::option<message> mtd = common::option<message>{};
     common::option<message> mtm = common::option<message>{};
-    common::option<message> mdt = common::option<message>{};
+
+    common::option<device_t> ktm = common::option<device_t>{};
 
     // spanning tree definition: aggregate computation of parent and below set
     #ifdef NOTREE
@@ -202,7 +228,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second.type = msgtype::OFFER;
             parst.second.to = parst.second.from; // from me to requester
             parst.second.from = node.uid;
-            mtm = parst.second;
+            ktm = parst.second.to; // process key is requester
         }
         break;
     case devstatus::SERVED:
@@ -215,7 +241,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::SERVING:
         if (parst.second.type == msgtype::ACCEPT) { // just transitioned: start sending file
-            mdt = send_file_seq(CALL, parst.second.from);
+            mtd = send_file_seq(CALL, parst.second.from);
         }
         break;
     default:
@@ -223,10 +249,10 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, mtm, ispp{}, parent, below, os.size());
+    rtm = tree_message(CALL, ktm, mtd, ispp{}, parent, below, os.size());
 
     // another call for data transfer so we can use different termination type if we wish
-    rdt = tree_message(CALL, mdt, ispp{}, parent, below, os.size());
+    rdt = tree_message_data(CALL, mtd, ispp{}, parent, below, os.size());
 
     switch (st) {
     case devstatus::IDLE:
@@ -261,7 +287,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         }
         break;
     case devstatus::SERVING:
-        if (mdt.size()) { // if all file sent, transition back to IDLE
+        if (mtd.size()) { // if all file sent, transition back to IDLE
             parst.first = devstatus::IDLE;
         }
         break;
