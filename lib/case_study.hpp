@@ -103,6 +103,9 @@ GEN(T) message_log_type spherical_message(ARGS, common::option<message> const& m
 }
 FUN_EXPORT spherical_message_t = export_list<spawn_profiler_t>;
 
+//! @brief Result type of spawn calls dispatching messages.
+using parametric_status_t = std::pair<devstatus, message>;
+
 //! @brief Process that does a spherical broadcast of a service request.
 GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const& m, T, int render = -1) { CODE
     message_log_type r = spawn_profiler(CALL, tags::spherical<T>{}, [&](message const &m) {
@@ -120,12 +123,13 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
 FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
 //! @brief Sends a message over a tree topology.
-GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, message const& m, real_t v, T, device_t parent, S const &below) { CODE
+GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, parametric_status_t const& parst, real_t v, T, device_t parent, S const &below) { CODE
+    message m = parst.second;
     key_log_type r = spawn(CALL, 
           [&](device_t k){
             if (node.uid == k) { // requester node
 
-            } else if (false) { // sent an offer
+            } else if (m.type == msgtype::OFFER && m.to == k) { // sent an offer to requester
 
             } else { // just in the spanning-tree
 
@@ -179,9 +183,6 @@ FUN bool timeout(ARGS) { CODE
     return to;
 }
 FUN_EXPORT timeout_t = export_list<int>;
-
-//! @brief Result type of spawn calls dispatching messages.
-using parametric_status_t = std::pair<devstatus, message>;
 
 #ifdef BLOOM
 //! @brief The type for a set of devices.
@@ -259,7 +260,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, ktm, parst.second, 0.3, ispp{}, parent, below);
+    rtm = tree_message(CALL, ktm, parst, 0.3, ispp{}, parent, below);
 
     // another call for data transfer so we can use different termination type if we wish
     rdt = tree_message_data(CALL, mtd, ispp{}, parent, below, os.size());
