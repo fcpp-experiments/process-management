@@ -120,30 +120,31 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
 FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
 //! @brief Sends a message over a tree topology.
-GEN(T,S) message_log_type tree_message(ARGS, common::option<device_t> const& k, common::option<message> const& m, T, device_t parent, S const &below, size_t set_size, int render = -1) { CODE
-    message_log_type r = spawn(CALL, 
-        [&](message const& m){
-            auto r = process(m);
-            termination_logic(CALL, get<1>(r), v, m, T{});
-            real_t key = get<1>(r) == status::external ? 0.5 : 1;
+GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, message const& m, real_t v, T, device_t parent, S const &below) { CODE
+    key_log_type r = spawn(CALL, 
+//        [&](device_t k, message const& m){
+          [&](device_t k){
+            bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
+            bool dest_path = below.count(m.to) > 0;
+            status s = m.to == node.uid ?  
+                    status::terminated_output :
+                    source_path or dest_path ? status::internal : status::external;
+
+            auto rp = make_tuple(m, s); 
+
+            // end of "process"
+
+            termination_logic(CALL, get<1>(rp), v, m, tags::tree<T>{});
+            real_t key = get<1>(rp) == status::external ? 0.5 : 1;
             node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
-            return r;
-        }, std::forward<S>(key_set));
-        
-    // tags::tree<T>{}, [&](message const &m) {
-    //         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
-    //         bool dest_path = below.count(m.to) > 0;
-    //         status s = m.to == node.uid ?  
-    //                 status::terminated_output :
-    //                 source_path or dest_path ? status::internal : status::external;
-
-    //         return make_tuple(node.current_time(), s); 
-    //     }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
-
+            return rp;
+        }, k);
+        //std::forward<device_t>(k));
+    
     return r;
 }
-//! @brief Exports for the main function.
-FUN_EXPORT tree_message_t = export_list<spawn_profiler_t>;
+//! @brief Export list for spawn_profiler.
+FUN_EXPORT tree_message_t = export_list<spawn_t<device_t, status>, termination_logic_t>;
 
 // TODO ***UNIFY WITH tree_message***
 GEN(T,S) message_log_type tree_message_data(ARGS, common::option<message> const& m, T, device_t parent, S const &below, size_t set_size, int render = -1) { CODE
@@ -161,6 +162,8 @@ GEN(T,S) message_log_type tree_message_data(ARGS, common::option<message> const&
 
     return r;
 }
+//! @brief Exports for the main function.
+FUN_EXPORT tree_message_data_t = export_list<spawn_profiler_t>;
 
 FUN bool timeout(ARGS) { CODE
     int t = counter(CALL);
@@ -187,7 +190,8 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     // import tags for convenience
     using namespace tags;
 
-    message_log_type rd, rtm, rdt;
+    message_log_type rd, rdt;
+    key_log_type rtm;
     devstatus st = parst.first;
     message par = parst.second;
     common::option<message> md = common::option<message>{};
@@ -249,7 +253,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, ktm, mtd, ispp{}, parent, below, os.size());
+    rtm = tree_message(CALL, ktm, mtd, 0.3, ispp{}, parent, below);
 
     // another call for data transfer so we can use different termination type if we wish
     rdt = tree_message_data(CALL, mtd, ispp{}, parent, below, os.size());
@@ -271,7 +275,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         if (rtm.size()) { // transition to SERVED
             parst.first = devstatus::SERVED;
             // ASSUMPTION: if more than one candidate, get SERVED by first
-            parst.second = (*rtm.begin()).first;
+            parst.second = (*rtm.begin()).second;
         } else if (timeout(CALL)) { // transition back to IDLE
             parst.first = devstatus::IDLE;                   
         }
@@ -281,7 +285,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         if (rtm.size()) { // transition to SERVING
             parst.first = devstatus::SERVING;
             // ASSUMPTION: if more than one candidate, SERVE the first
-            parst.second = (*rtm.begin()).first;
+            parst.second = (*rtm.begin()).second;
         } else if (timeout(CALL)) { // transition back to IDLE
             parst.first = devstatus::IDLE;                   
         }
@@ -300,7 +304,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     }
 }
-FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, spherical_message_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t, timeout_t>;
+FUN_EXPORT device_automaton_t = common::export_list<spherical_discovery_t, spherical_message_t, flex_parent_t, real_t, parent_collection_t<set_t>, tree_message_t, tree_message_data_t, timeout_t>;
 
 //! @brief Main case study function.
 MAIN() {
