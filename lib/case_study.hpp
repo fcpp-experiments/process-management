@@ -122,8 +122,15 @@ FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 //! @brief Sends a message over a tree topology.
 GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, message const& m, real_t v, T, device_t parent, S const &below) { CODE
     key_log_type r = spawn(CALL, 
-//        [&](device_t k, message const& m){
           [&](device_t k){
+            if (node.uid == k) { // requester node
+
+            } else if (false) { // sent an offer
+
+            } else { // just in the spanning-tree
+
+            }
+
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
             status s = m.to == node.uid ?  
@@ -139,7 +146,6 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, mess
             node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
             return rp;
         }, k);
-        //std::forward<device_t>(k));
     
     return r;
 }
@@ -253,7 +259,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     }
 
     rd = spherical_discovery(CALL, md, wispp{});
-    rtm = tree_message(CALL, ktm, mtd, 0.3, ispp{}, parent, below);
+    rtm = tree_message(CALL, ktm, parst.second, 0.3, ispp{}, parent, below);
 
     // another call for data transfer so we can use different termination type if we wish
     rdt = tree_message_data(CALL, mtd, ispp{}, parent, below, os.size());
