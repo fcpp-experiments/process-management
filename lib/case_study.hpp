@@ -124,16 +124,29 @@ FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
 //! @brief Sends a message over a tree topology.
 GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, parametric_status_t const& parst, real_t v, T, device_t parent, S const &below) { CODE
+    devstatus st = parst.first;
     message m = parst.second;
-    key_log_type r = spawn(CALL, 
-          [&](device_t k){
-            if (node.uid == k) { // requester node
 
-            } else if (m.type == msgtype::OFFER && m.to == k) { // sent an offer to requester
+    key_log_type r = spawn(CALL, [&](device_t k){
+            switch (st) {
+            case devstatus::IDLE:
 
-            } else { // just in the spanning-tree
+            case devstatus::DISCO:
+                if (node.uid == k) { // requester node k
 
+                }
+                break;
+            case devstatus::OFFER:
+                if (m.to == k) { // sent an offer to requester node k
+
+                }
+                break;
+            default:
+                break;
             }
+
+            int v;
+            sp_collection(CALL, -1, v, 0, [&](int i1, int i2){return std::max(i1,i2);});
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
