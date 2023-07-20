@@ -60,6 +60,7 @@ DECLARE_OPTIONS(list,
         num_svc_types,                  size_t,
         offered_svc,                    size_t,
         svc_rank,                       real_t,
+        best_rank,                      real_t,
         hops,                           size_t
     >,
     // the basic tags and corresponding aggregators to be logged

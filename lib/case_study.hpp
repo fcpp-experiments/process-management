@@ -128,30 +128,38 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
     message m = parst.second;
 
     key_log_type r = spawn(CALL, [&](device_t k){
+            bool src = false;
+            real_t r = 0;
+
             switch (st) {
             case devstatus::IDLE:
 
             case devstatus::DISCO:
                 if (node.uid == k) { // requester node k
-
+                    src = true;
                 }
                 break;
             case devstatus::OFFER:
                 if (m.to == k) { // sent an offer to requester node k
-
+                    r = node.storage(tags::svc_rank{});
                 }
                 break;
             default:
                 break;
             }
 
-            int v;
-            sp_collection(CALL, -1, v, 0, [&](int i1, int i2){return std::max(i1,i2);});
+            real_t d = abf_distance(CALL, src);
+            tuple<real_t,device_t> t = sp_collection(CALL, d, 
+                make_tuple(r,node.uid), make_tuple(0,0), 
+                [&](tuple<real_t,device_t> t1, tuple<real_t,device_t> t2){return std::max(t1,t2);});
+
+            node.storage(tags::best_rank{}) = get<0>(t);
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
             status s = m.to == node.uid ?  
-                    status::terminated_output :
+                    //status::terminated_output :
+                    status::internal :
                     source_path or dest_path ? status::internal : status::external;
 
             auto rp = make_tuple(m, s); 
@@ -255,19 +263,19 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             ktm = parst.second.to; // process key is requester
         }
         break;
-    case devstatus::SERVED:
-        if (parst.second.type == msgtype::OFFER) { // just transitioned: prepare accept message
-            parst.second.type = msgtype::ACCEPT;
-            parst.second.to = parst.second.from;
-            parst.second.from = node.uid;
-            mtm = parst.second;
-        }
-        break;
-    case devstatus::SERVING:
-        if (parst.second.type == msgtype::ACCEPT) { // just transitioned: start sending file
-            mtd = send_file_seq(CALL, parst.second.from);
-        }
-        break;
+    // case devstatus::SERVED:
+    //     if (parst.second.type == msgtype::OFFER) { // just transitioned: prepare accept message
+    //         parst.second.type = msgtype::ACCEPT;
+    //         parst.second.to = parst.second.from;
+    //         parst.second.from = node.uid;
+    //         mtm = parst.second;
+    //     }
+    //     break;
+    // case devstatus::SERVING:
+    //     if (parst.second.type == msgtype::ACCEPT) { // just transitioned: start sending file
+    //         mtd = send_file_seq(CALL, parst.second.from);
+    //     }
+    //     break;
     default:
         break;
     }
@@ -291,35 +299,35 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second = (*rd.begin()).first;
         }
         break;
-    case devstatus::DISCO:
-        if (rtm.size()) { // transition to SERVED
-            parst.first = devstatus::SERVED;
-            // ASSUMPTION: if more than one candidate, get SERVED by first
-            parst.second = (*rtm.begin()).second;
-        } else if (timeout(CALL)) { // transition back to IDLE
-            parst.first = devstatus::IDLE;                   
-        }
+    // case devstatus::DISCO:
+    //     if (rtm.size()) { // transition to SERVED
+    //         parst.first = devstatus::SERVED;
+    //         // ASSUMPTION: if more than one candidate, get SERVED by first
+    //         parst.second = (*rtm.begin()).second;
+    //     } else if (timeout(CALL)) { // transition back to IDLE
+    //         parst.first = devstatus::IDLE;                   
+    //     }
 
-        break;
-    case devstatus::OFFER:
-        if (rtm.size()) { // transition to SERVING
-            parst.first = devstatus::SERVING;
-            // ASSUMPTION: if more than one candidate, SERVE the first
-            parst.second = (*rtm.begin()).second;
-        } else if (timeout(CALL)) { // transition back to IDLE
-            parst.first = devstatus::IDLE;                   
-        }
-        break;
-    case devstatus::SERVING:
-        if (mtd.size()) { // if all file sent, transition back to IDLE
-            parst.first = devstatus::IDLE;
-        }
-        break;
-    case devstatus::SERVED:
-        if (rdt.size() and (*rdt.begin()).first.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
-            parst.first = devstatus::IDLE;
-        }
-        break;
+    //     break;
+    // case devstatus::OFFER:
+    //     if (rtm.size()) { // transition to SERVING
+    //         parst.first = devstatus::SERVING;
+    //         // ASSUMPTION: if more than one candidate, SERVE the first
+    //         parst.second = (*rtm.begin()).second;
+    //     } else if (timeout(CALL)) { // transition back to IDLE
+    //         parst.first = devstatus::IDLE;                   
+    //     }
+    //     break;
+    // case devstatus::SERVING:
+    //     if (mtd.size()) { // if all file sent, transition back to IDLE
+    //         parst.first = devstatus::IDLE;
+    //     }
+    //     break;
+    // case devstatus::SERVED:
+    //     if (rdt.size() and (*rdt.begin()).first.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
+    //         parst.first = devstatus::IDLE;
+    //     }
+    //     break;
     default:
         break;
     }
