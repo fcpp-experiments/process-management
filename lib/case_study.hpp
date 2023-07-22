@@ -182,9 +182,8 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
-            status s = m.to == node.uid ?  
-                    //status::terminated_output :
-                    status::internal :
+            status s = chosen == node.uid ?  
+                    status::terminated_output :
                     source_path or dest_path ? status::internal : status::external;
 
             auto rp = make_tuple(m, s); 
