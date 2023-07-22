@@ -64,6 +64,15 @@ color status_color(const devstatus st, const size_t nproc)
     return sc;
 }
 
+FUN bool timeout(ARGS, real_t coeff) { CODE
+    int t = counter(CALL);
+
+    bool to = t > node.storage(tags::hops{}) * coeff;
+
+    return to;
+}
+FUN_EXPORT timeout_t = export_list<int>;
+
 //! @brief Possibly generates a discovery message, given the number of devices.
 FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
@@ -157,8 +166,11 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
             switch (st) {
             case devstatus::DISCO:
                 if (node.uid == k) { // requester node k
-                    choice=constant_after(CALL, get<1>(t), 
-                                          node.storage(tags::hops{}) * stabilize_coeff);
+                    if (timeout(CALL,stabilize_coeff)) {
+                        choice=get<1>(t);
+                    }
+                    //constant_after(CALL, get<1>(t), 
+                    //                      node.storage(tags::hops{}) * stabilize_coeff);
                 }
                 break;
             default:
@@ -208,15 +220,6 @@ GEN(T,S) message_log_type tree_message_data(ARGS, common::option<message> const&
 }
 //! @brief Exports for the main function.
 FUN_EXPORT tree_message_data_t = export_list<spawn_profiler_t>;
-
-FUN bool timeout(ARGS) { CODE
-    int t = counter(CALL);
-
-    bool to = t > node.storage(tags::hops{}) * timeout_coeff;
-
-    return to;
-}
-FUN_EXPORT timeout_t = export_list<int>;
 
 #ifdef BLOOM
 //! @brief The type for a set of devices.
