@@ -222,6 +222,7 @@ namespace tags {
 
     //! @brief TODO remove.
     struct best_rank {};
+    struct chosen_id{};
 
 } // tags
 

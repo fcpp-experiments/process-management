@@ -130,10 +130,9 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
     key_log_type r = spawn(CALL, [&](device_t k){
             bool src = false;
             real_t r = 0;
+            device_t choice = node.storage(tags::devices{});
 
             switch (st) {
-            case devstatus::IDLE:
-
             case devstatus::DISCO:
                 if (node.uid == k) { // requester node k
                     src = true;
@@ -154,6 +153,20 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
                 [&](tuple<real_t,device_t> t1, tuple<real_t,device_t> t2){return std::max(t1,t2);});
 
             node.storage(tags::best_rank{}) = get<0>(t);
+
+            switch (st) {
+            case devstatus::DISCO:
+                if (node.uid == k) { // requester node k
+                    choice=constant_after(CALL, get<1>(t), 
+                                          node.storage(tags::hops{}) * stabilize_coeff);
+                }
+                break;
+            default:
+                break;
+            }
+
+            device_t chosen = broadcast(CALL, d, choice);
+            node.storage(tags::chosen_id{}) = chosen;
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
