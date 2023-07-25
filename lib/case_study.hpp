@@ -78,7 +78,9 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
 
     // TODO: limited to one message from a specific device at aspecific time
-    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    // if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0)
+    if (node.uid == devices-2 && node.current_time() > 20 && node.storage(tags::sent_count{}) == 0)
+         {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
@@ -118,14 +120,14 @@ using parametric_status_t = std::pair<devstatus, message>;
 //! @brief Process that does a spherical broadcast of a service request.
 GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const& m, T, int render = -1) { CODE
     message_log_type r = spawn_profiler(CALL, tags::spherical<T>{}, [&](message const &m) {
-            status s = status::internal;
+        status s = status::internal;
 
-            // if I offer a service matching the request, I reply by producing output
-//            if (node.uid==55 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
-            if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+        // if I offer a service matching the request, I reply by producing output
+        //    if (node.uid==455 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+        if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
-            return make_tuple(node.current_time(), s); 
-        }, m, node.storage(tags::infospeed{}), render, 0, 0);
+        return make_tuple(node.current_time(), s); 
+    }, m, node.storage(tags::infospeed{}), render, 0, 0);
 
     return r;
 }
@@ -204,7 +206,7 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
             }
 
             real_t key = get<1>(rp) == status::external ? 0.5 : 1;
-            node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
+            node.storage(tags::proc_data{}).push_back(color::hsva(100, key, key));
 
             return rp;
         }, k);
@@ -257,11 +259,8 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     common::option<device_t> ktm = common::option<device_t>{};
 
     // spanning tree definition: aggregate computation of parent and below set
-    #ifdef NOTREE
-        bool is_src = false;
-    #else
-        bool is_src = node.uid == 0;
-    #endif
+    bool is_src = node.uid == 0;
+
     device_t parent = flex_parent(CALL, is_src, comm);
     set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const &y)
                                     {
@@ -293,7 +292,8 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::SERVING:
         if (parst.second.type == msgtype::OFFER) { // just transitioned: start sending file
-            mtd = send_file_seq(CALL, parst.second.to);
+            if (counter(CALL) == 2)
+                mtd = send_file_seq(CALL, parst.second.to);
         }
         break;
     default:
@@ -319,16 +319,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second = (*rd.begin()).first;
         }
         break;
-    // case devstatus::DISCO:
-    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-    //         parst.first = devstatus::IDLE;                   
-    //     }
-    //     break;
-    // case devstatus::OFFER:
-    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-    //          parst.first = devstatus::IDLE;                   
-    //     }
-    //     break;
+    case devstatus::DISCO:
+        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+            parst.first = devstatus::IDLE;                   
+        }
+        break;
+    case devstatus::OFFER:
+        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+             parst.first = devstatus::IDLE;                   
+        }
+        break;
     case devstatus::SERVING:
         if (mtd.size()) { // if all file sent, transition back to IDLE
             parst.first = devstatus::IDLE;
