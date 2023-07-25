@@ -177,7 +177,8 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
             // sent an offer to requester node k
             if (m.to == k) {
                 if (st == devstatus::OFFER)
-                    st = devstatus::SERVING;
+                    if (chosen == node.uid)
+                        st = devstatus::SERVING;
             }
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
@@ -292,7 +293,7 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::SERVING:
         if (parst.second.type == msgtype::OFFER) { // just transitioned: start sending file
-            mtd = send_file_seq(CALL, parst.second.from);
+            mtd = send_file_seq(CALL, parst.second.to);
         }
         break;
     default:
@@ -318,16 +319,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second = (*rd.begin()).first;
         }
         break;
-    case devstatus::DISCO:
-        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-            parst.first = devstatus::IDLE;                   
-        }
-        break;
-    case devstatus::OFFER:
-        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-             parst.first = devstatus::IDLE;                   
-        }
-        break;
+    // case devstatus::DISCO:
+    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+    //         parst.first = devstatus::IDLE;                   
+    //     }
+    //     break;
+    // case devstatus::OFFER:
+    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+    //          parst.first = devstatus::IDLE;                   
+    //     }
+    //     break;
     case devstatus::SERVING:
         if (mtd.size()) { // if all file sent, transition back to IDLE
             parst.first = devstatus::IDLE;
