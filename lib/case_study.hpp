@@ -184,7 +184,7 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
             }
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
-            bool dest_path = below.count(m.to) > 0;
+            bool dest_path = below.count(k) > 0;
             status s = (to or chosen == node.uid) ? status::terminated_output :
                        (source_path or dest_path) ? status::internal : status::external;
 
@@ -288,6 +288,8 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second.to = parst.second.from; // from me to requester
             parst.second.from = node.uid;
             ktm = parst.second.to; // process key is requester
+
+            // mtd = parst.second;
         }
         break;
     case devstatus::SERVING:
