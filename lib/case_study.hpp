@@ -79,7 +79,7 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
 
     // TODO: limited to one message from a specific device at aspecific time
     // if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0)
-    if (node.uid == devices-2 && node.current_time() > 20 && node.storage(tags::sent_count{}) == 0)
+    if (node.uid >= devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0)
          {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
@@ -123,8 +123,8 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
         status s = status::internal;
 
         // if I offer a service matching the request, I reply by producing output
-        //    if (node.uid==455 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
-        if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+        if (node.uid==455 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+        // if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
         return make_tuple(node.current_time(), s); 
     }, m, node.storage(tags::infospeed{}), render, 0, 0);
@@ -288,14 +288,11 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second.to = parst.second.from; // from me to requester
             parst.second.from = node.uid;
             ktm = parst.second.to; // process key is requester
-
-            // mtd = parst.second;
         }
         break;
     case devstatus::SERVING:
         if (parst.second.type == msgtype::OFFER) { // just transitioned: start sending file
-            if (counter(CALL) == 2)
-                mtd = send_file_seq(CALL, parst.second.to);
+            mtd = send_file_seq(CALL, parst.second.to);
         }
         break;
     default:
@@ -321,23 +318,24 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second = (*rd.begin()).first;
         }
         break;
-    case devstatus::DISCO:
-        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-            parst.first = devstatus::IDLE;                   
-        }
-        break;
-    case devstatus::OFFER:
-        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-             parst.first = devstatus::IDLE;                   
-        }
-        break;
+    // case devstatus::DISCO:
+    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+    //         parst.first = devstatus::IDLE;                   
+    //     }
+    //     break;
+    // case devstatus::OFFER:
+    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+    //          parst.first = devstatus::IDLE;                   
+    //     }
+    //     break;
     case devstatus::SERVING:
-        if (mtd.size()) { // if all file sent, transition back to IDLE
+        if (mtd.empty()) { // if all file sent, transition back to IDLE
             parst.first = devstatus::IDLE;
         }
         break;
     case devstatus::SERVED:
         if (rdt.size() and (*rdt.begin()).first.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
+        // if (rdt.size()) { // if all file received, transition back to IDLE
             parst.first = devstatus::IDLE;
         }
         break;
