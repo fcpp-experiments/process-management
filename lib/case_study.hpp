@@ -132,28 +132,27 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
 FUN_EXPORT spherical_discovery_t = export_list<spawn_profiler_t>;
 
 //! @brief Sends a message over a tree topology.
-GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, parametric_status_t const& parst, real_t v, T, device_t parent, S const &below) { CODE
-    devstatus st = parst.first;
-    message m = parst.second;
+GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, parametric_status_t &parst, real_t v, T, device_t parent, S const &below) { CODE
+    devstatus &st = parst.first;
+    message &m = parst.second;
 
     key_log_type r = spawn(CALL, [&](device_t k){
             bool src = false;
             real_t r = 0;
             device_t choice = node.storage(tags::devices{});
+            bool to = false;
 
-            switch (st) {
-            case devstatus::DISCO:
-                if (node.uid == k) { // requester node k
-                    src = true;
-                }
-                break;
-            case devstatus::OFFER:
-                if (m.to == k) { // sent an offer to requester node k
+            // requester node k
+            if (node.uid == k) {
+                src = true;
+                if (st == devstatus::IDLE)
+                    to = true;
+            }
+
+            // sent an offer to requester node k
+            if (m.to == k) {
+                if (st == devstatus::OFFER)
                     r = node.storage(tags::svc_rank{});
-                }
-                break;
-            default:
-                break;
             }
 
             real_t d = abf_distance(CALL, src);
@@ -163,18 +162,13 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
 
             node.storage(tags::best_rank{}) = get<0>(t);
 
-            switch (st) {
-            case devstatus::DISCO:
-                if (node.uid == k) { // requester node k
+            // requester node k
+            if (node.uid == k) { 
+                if (st == devstatus::DISCO)
                     if (timeout(CALL,stabilize_coeff)) {
                         choice=get<1>(t);
+                        st = devstatus::SERVED;
                     }
-                    //constant_after(CALL, get<1>(t), 
-                    //                      node.storage(tags::hops{}) * stabilize_coeff);
-                }
-                break;
-            default:
-                break;
             }
 
             device_t chosen = broadcast(CALL, d, choice);
@@ -182,8 +176,7 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
-            status s = chosen == node.uid ?  
-                    status::terminated_output :
+            status s = (to || chosen == node.uid) ? status::terminated_output :
                     source_path or dest_path ? status::internal : status::external;
 
             auto rp = make_tuple(m, s); 
@@ -322,7 +315,6 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
     //     } else if (timeout(CALL)) { // transition back to IDLE
     //         parst.first = devstatus::IDLE;                   
     //     }
-
     //     break;
     // case devstatus::OFFER:
     //     if (rtm.size()) { // transition to SERVING
