@@ -176,16 +176,29 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
 
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
-            status s = (to || chosen == node.uid) ? status::terminated_output :
-                    source_path or dest_path ? status::internal : status::external;
+            status s = (to or chosen == node.uid) ? status::terminated_output :
+                       (source_path or dest_path) ? status::internal : status::external;
 
             auto rp = make_tuple(m, s); 
 
             // end of "process"
 
             termination_logic(CALL, get<1>(rp), v, m, tags::tree<T>{});
+
+            // if terminated by others
+            if (s==status::internal && s!=get<1>(rp)) {
+                // sent an offer to requester node k
+                if (m.to == k) {
+                    if (st == devstatus::OFFER) {
+                        st = devstatus::IDLE;
+                        m = message{};
+                    }
+                }
+            }
+
             real_t key = get<1>(rp) == status::external ? 0.5 : 1;
             node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
+
             return rp;
         }, k);
     
