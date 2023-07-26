@@ -168,7 +168,7 @@ Hovering on a node will also display its UID in the top-left corner.
 - `dcount` (delivery count): % of messages that arrived to destination 
 - `aproc` (average processes): average number of process instances (i.e., for a single process, the average number of devices running it)
 - `asiz` (average size) 
-- `mmsiz` (max message dize)
+- `mmsiz` (max message size)
 - `adel` (average delay)
 
 See also the namespace `tag` in file `lib/generals.hpp` (where, e.g., struct `max_msg_size` turns into extracted metric `mmsize`).
