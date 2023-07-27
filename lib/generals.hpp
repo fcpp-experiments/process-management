@@ -220,6 +220,9 @@ namespace tags {
     //! @brief Quality of offered service in interval [0,1).
     struct svc_rank {};
 
+    //! @brief Status of node
+    struct dev_status {};
+
     //! @brief TODO remove.
     struct best_rank {};
     struct chosen_id{};

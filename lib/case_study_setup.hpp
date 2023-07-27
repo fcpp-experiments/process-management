@@ -18,6 +18,18 @@
  */
 namespace fcpp {
 
+namespace coordination {
+//! @brief Status of devices
+enum devstatus
+{
+    IDLE,   // nothing interesting
+    DISCO,  // discovery of service
+    OFFER,  // offer of service
+    SERVED, // being served
+    SERVING // serving
+};
+}
+
 //! @brief Namespace for component options.
 namespace option {
 
@@ -32,6 +44,9 @@ using test_store_t = tuple_store<
     first_delivery_tot<T<S>>,  times_t,
     delivery_count<T<S>>,      size_t
 >;
+
+template <int s, typename T = dev_status>
+using status_aggregator = aggregator::filter<filter::equal<s>, aggregator::sum<T>>;
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
@@ -63,11 +78,14 @@ DECLARE_OPTIONS(list,
         hops,                           size_t,
         // TODO: REMOVE
         best_rank,                      real_t,
-        chosen_id,                      device_t
+        chosen_id,                      device_t,
+        dev_status,                     coordination::devstatus
     >,
     // the basic tags and corresponding aggregators to be logged
     aggregators<
-        sent_count,         aggregator::sum<size_t>
+        sent_count,         aggregator::sum<size_t>,
+        dev_status,         aggregator::combine<status_aggregator<coordination::devstatus::IDLE, double>,
+                                                status_aggregator<coordination::devstatus::DISCO, double>>
     >,
     common::type_sequence<test_store_t<spherical,wispp>, test_store_t<tree,ispp>>,
     // data initialisation

@@ -27,16 +27,6 @@ namespace fcpp
 namespace coordination
 {
 
-//! @brief Status of devices
-enum class devstatus
-{
-    IDLE,   // nothing interesting
-    DISCO,  // discovery of service
-    OFFER,  // offer of service
-    SERVED, // being served
-    SERVING // serving
-};
-
 color status_color(const devstatus st, const size_t nproc)
 {
     color sc;
