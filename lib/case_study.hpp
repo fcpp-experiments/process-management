@@ -78,9 +78,8 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
 
     // TODO: limited to one message from a specific device at aspecific time
-    // if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0)
-    if (node.uid >= devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0)
-         {
+    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    // if (node.uid >= devices-2 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
@@ -123,8 +122,8 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
         status s = status::internal;
 
         // if I offer a service matching the request, I reply by producing output
-        if (node.uid==455 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
-        // if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+        // if (node.uid==455 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
+        if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
         return make_tuple(node.current_time(), s); 
     }, m, node.storage(tags::infospeed{}), render, 0, 0);
@@ -166,9 +165,9 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
 
             // requester node k
             if (node.uid == k) { 
-                if (st == devstatus::DISCO)
+                if (st == devstatus::DISCO || st == devstatus::SERVED)
                     if (timeout(CALL,stabilize_coeff)) {
-                        choice=get<1>(t);
+                        choice=constant(CALL, get<1>(t));
                         st = devstatus::SERVED;
                     }
             }
