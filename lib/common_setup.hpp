@@ -41,7 +41,7 @@ constexpr size_t end = 100;
 constexpr size_t dist_dev = 30;
 
 //! @brief Multiplier of hops for timeout (in rounds).
-constexpr double timeout_coeff = 1;
+constexpr double timeout_coeff = 2;
 
 //! @brief Multiplier of hops for stabilization delay (in rounds).
 constexpr double stabilize_coeff = 1;

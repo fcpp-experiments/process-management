@@ -48,6 +48,14 @@ using test_store_t = tuple_store<
 template <int s, typename T = dev_status>
 using status_aggregator = aggregator::filter<filter::equal<s>, aggregator::sum<T>>;
 
+using plot_t = plot::split<plot::time, 
+   plot::join<plot::value<status_aggregator<coordination::devstatus::SERVING>>,
+              plot::value<status_aggregator<coordination::devstatus::SERVED>>,
+              plot::value<status_aggregator<coordination::devstatus::DISCO>>,
+              plot::value<status_aggregator<coordination::devstatus::OFFER>>
+   >  
+>;
+
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
     parallel<false>,     // no multithreading on node rounds
@@ -84,7 +92,9 @@ DECLARE_OPTIONS(list,
     // the basic tags and corresponding aggregators to be logged
     aggregators<
         sent_count,         aggregator::sum<size_t>,
-        dev_status,         aggregator::combine<status_aggregator<coordination::devstatus::IDLE, double>,
+        dev_status,         aggregator::combine<status_aggregator<coordination::devstatus::SERVING, double>,
+                                                status_aggregator<coordination::devstatus::SERVED, double>,
+                                                status_aggregator<coordination::devstatus::OFFER, double>,
                                                 status_aggregator<coordination::devstatus::DISCO, double>>
     >,
     common::type_sequence<test_store_t<spherical,wispp>, test_store_t<tree,ispp>>,
@@ -110,7 +120,7 @@ DECLARE_OPTIONS(list,
         hops,   double,
         speed,  double
     >,
-    //plot_type<plot_t>, // the plot description to be used
+    plot_type<plot_t>, // the plot description to be used
     dimension<dim>, // dimensionality of the space
     connector<connect::fixed<comm, 1, dim>>, // connection allowed within a fixed comm range
     shape_tag<node_shape>, // the shape of a node is read from this tag in the store

@@ -307,16 +307,16 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
             parst.second = (*rd.begin()).first;
         }
         break;
-    // case devstatus::DISCO:
-    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-    //         parst.first = devstatus::IDLE;                   
-    //     }
-    //     break;
-    // case devstatus::OFFER:
-    //     if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
-    //          parst.first = devstatus::IDLE;                   
-    //     }
-    //     break;
+    case devstatus::DISCO:
+        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+            parst.first = devstatus::IDLE;                   
+        }
+        break;
+    case devstatus::OFFER:
+        if (timeout(CALL,timeout_coeff)) { // transition back to IDLE
+             parst.first = devstatus::IDLE;                   
+        }
+        break;
     case devstatus::SERVING:
         if (mtd.empty()) { // if all file sent, transition back to IDLE
             parst.first = devstatus::IDLE;
@@ -358,6 +358,8 @@ MAIN() {
         int proc_num = node.storage(proc_data{}).size() - 1;
         node.storage(node_color{}) = status_color(st, proc_num);
         while (proc_num--) node.storage(node_size{}) *= 1.5;
+
+        node.storage(dev_status{}) = parst.first;
 
         return parst; });
 }
