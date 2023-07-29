@@ -46,7 +46,7 @@ using test_store_t = tuple_store<
 >;
 
 template <int s, typename T = dev_status>
-using status_aggregator = aggregator::filter<filter::equal<s>, aggregator::sum<T>>;
+using status_aggregator = aggregator::filter<filter::equal<s>, aggregator::count<T>>;
 
 using plot_t = plot::split<plot::time, 
    plot::join<plot::value<status_aggregator<coordination::devstatus::SERVING>>,
