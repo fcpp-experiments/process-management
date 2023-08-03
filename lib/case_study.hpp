@@ -357,7 +357,11 @@ MAIN() {
 
         devstatus st = parst.first;
         int proc_num = node.storage(proc_data{}).size() - 1;
+
         node.storage(node_color{}) = status_color(st, proc_num);
+        node.storage(left_color{}) = status_color(st, proc_num);
+        node.storage(right_color{}) = status_color(st, proc_num);
+
         while (proc_num--) node.storage(node_size{}) *= 1.5;
 
         node.storage(dev_status{}) = parst.first;
