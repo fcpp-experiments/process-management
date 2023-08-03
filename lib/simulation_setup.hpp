@@ -48,11 +48,12 @@ using test_store_t = tuple_store<
 //! @brief Functors for a given test.
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
-    avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>, true>, aggregator::sum<delivery_count<T<S>>, false>>,
-    avg_size<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_msg_size<T<S>>, false>>, distribution::constant<i<devices>>>,
-    avgtot_size<T<S>>,  functor::div<functor::div<aggregator::sum<tot_msg_size<T<S>>, false>, distribution::constant<i<devices>>>, n<end>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>, false>>, distribution::constant<i<devices>>>,
-    avgtot_proc<T<S>>,  functor::div<functor::div<aggregator::sum<tot_proc<T<S>>, false>, distribution::constant<i<devices>>>, n<end>>
+    // avg_delay<T<S>>,    functor::div<aggregator::only_finite<aggregator::sum<first_delivery_tot<T<S>>>>, aggregator::sum<delivery_count<T<S>>>>,
+    avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>>, aggregator::sum<delivery_count<T<S>>>>,
+    avg_size<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_msg_size<T<S>>>>, distribution::constant<i<devices>>>,
+    avgtot_size<T<S>>,  functor::div<functor::div<aggregator::sum<tot_msg_size<T<S>>>, distribution::constant<i<devices>>>, n<end>>,
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>>>, distribution::constant<i<devices>>>,
+    avgtot_proc<T<S>>,  functor::div<functor::div<aggregator::sum<tot_proc<T<S>>>, distribution::constant<i<devices>>>, n<end>>
 >;
 
 //! @brief Overall options (aggregator, storage, functors) for given tests.
@@ -91,7 +92,7 @@ template <typename S, bool is_time = std::is_same<S,plot::time>::value, size_t t
 using row_plot_t = plot::join<
 #ifdef ALLPLOTS
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<max_proc, aggregator::max<int>>>>,
-    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, plot::value<aggregator::sum<sent_count, false>>>>,
+    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, plot::value<aggregator::sum<sent_count>>>>,
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<repeat_count, aggregator::sum<size_t>>>>,
 #endif
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<delivery_count, aggregator::sum<size_t>>>>,

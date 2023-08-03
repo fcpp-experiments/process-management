@@ -16,6 +16,7 @@ int main() {
 
     int tvar = option::var_def<option::tvar>;
     int hops = option::var_def<option::hops>;
+    // int hops = 10;
     int dens = option::var_def<option::dens>;
     int speed = option::var_def<option::speed>;
     // int speed = 10;

@@ -36,7 +36,7 @@ color status_color(const devstatus st, const size_t nproc)
         sc = (nproc ? color(GREEN) : color(WHITE));
         break;
     case devstatus::DISCO:
-        sc = color(BLUE);
+        sc = color(ORANGE);
         break;
     case devstatus::OFFER:
         sc = color(RED);
@@ -45,7 +45,7 @@ color status_color(const devstatus st, const size_t nproc)
         sc = color(SALMON);
         break;
     case devstatus::SERVING:
-        sc = color(BROWN);
+        sc = color(BLUE);
         break;
     default:
         sc = color(BLACK);
@@ -68,8 +68,8 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
 
     // TODO: limited to one message from a specific device at aspecific time
-    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
-    // if (node.uid >= devices-2 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    // if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    if (node.uid >= devices-2 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
@@ -345,9 +345,10 @@ MAIN() {
     old(CALL, parametric_status_t{devstatus::IDLE, message{}}, [&](parametric_status_t parst) {
         // basic node rendering
         bool is_src = false;
-        bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
+        // bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
+        bool highlight = is_src or node.uid >= node.storage(devices{}) - 2;
         node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
-        node.storage(node_size{}) = highlight ? 20 : 10;
+        node.storage(node_size{}) = highlight ? 30 : 20;
         // clear up stats data
         node.storage(proc_data{}).clear();
         node.storage(proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
