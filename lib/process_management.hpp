@@ -75,7 +75,7 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, int render
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m){
         status s = node.uid == m.to ? status::terminated_output : status::internal;
         return make_tuple(node.current_time(), s);
-    }, m, node.storage(tags::infospeed{}), render, 0, 0);
+    }, m, 2.5, render, 0, 0);
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t>;
 
@@ -92,7 +92,7 @@ GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent,
         status s = node.uid == m.to ? status::terminated_output :
                    source_path or dest_path ? status::internal : status::external;
         return make_tuple(node.current_time(), s);
-    }, m, 0.9, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
+    }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
 }
 //! @brief Exports for the main function.
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
@@ -100,7 +100,7 @@ FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
 
 #ifdef BLOOM
 //! @brief The type for a set of devices.
-using set_t = bloom_filter<2,128>;
+using set_t = bloom_filter<2,256>;
 #else
 //! @brief The type for a set of devices.
 using set_t = std::unordered_set<device_t>;

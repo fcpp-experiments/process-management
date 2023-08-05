@@ -124,6 +124,9 @@ using round_s = sequence::periodic<
     distribution::constant_n<times_t, end + 5*period>
 >;
 
+//! @brief The periodic sequence of network logging events (one every second).
+using log_s = sequence::periodic<n<0>, n<1>, n<end>>;
+
 //! @brief The distribution of initial node positions (random in a given rectangle).
 using rectangle_d = distribution::rect<n<0>, n<0>, n<20>, i<side>, i<side>, n<20>>;
 

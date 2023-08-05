@@ -29,7 +29,7 @@ using test_aggr_t = aggregators<
     max_msg_size<T<S>>,        aggregator::max<size_t>,
     tot_msg_size<T<S>>,        aggregator::sum<size_t>,
     tot_proc<T<S>>,            aggregator::sum<int>,
-    first_delivery_tot<T<S>>,  aggregator::sum<times_t>,
+    first_delivery_tot<T<S>>,  aggregator::only_finite<aggregator::sum<times_t>>,
     delivery_count<T<S>>,      aggregator::sum<size_t>
 >;
 
@@ -48,8 +48,7 @@ using test_store_t = tuple_store<
 //! @brief Functors for a given test.
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
-    // avg_delay<T<S>>,    functor::div<aggregator::only_finite<aggregator::sum<first_delivery_tot<T<S>>>>, aggregator::sum<delivery_count<T<S>>>>,
-    avg_delay<T<S>>,    functor::div<aggregator::sum<first_delivery_tot<T<S>>>, aggregator::sum<delivery_count<T<S>>>>,
+    avg_delay<T<S>>,    functor::div<aggregator::only_finite<aggregator::sum<first_delivery_tot<T<S>>>>, aggregator::sum<delivery_count<T<S>>>>,
     avg_size<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_msg_size<T<S>>>>, distribution::constant<i<devices>>>,
     avgtot_size<T<S>>,  functor::div<functor::div<aggregator::sum<tot_msg_size<T<S>>>, distribution::constant<i<devices>>>, n<end>>,
     avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>>>, distribution::constant<i<devices>>>,
@@ -69,7 +68,7 @@ struct noaggr {
 
 //! @brief Lines for a given data and test.
 template <template<class> class T, typename A, template<class> class P, typename... Ts>
-using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P<Ts>>>::tags::front, aggregator::stats<double>>...>;
+using test_lines_t = plot::join<plot::value<typename A::template result_type<T<P<Ts>>>::tags::front, aggregator::only_finite<aggregator::stats<double>>>...>;
 
 //! @brief Lines for a given data and every test.
 template <template<class> class T, typename A>
@@ -138,7 +137,7 @@ DECLARE_OPTIONS(list,
     exports<coordination::main_t>, // export type list (types used in messages)
     retain<metric::retain<2>>, // retain time for messages
     round_schedule<round_s>, // the sequence generator for round events on nodes
-    log_schedule<sequence::periodic_n<1, 0, 1, end>>, // the sequence generator for log events on the network
+    log_schedule<log_s>, // the sequence generator for log events on the network
     spawn_schedule<sequence::multiple<i<devices, size_t>, n<0>>>, // the sequence generator of node creation events on the network
     // the basic contents of the node storage
     tuple_store<
