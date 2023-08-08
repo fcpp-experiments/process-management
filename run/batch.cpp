@@ -39,7 +39,7 @@ int main() {
                 double s = common::get<option::side>(x);
                 return d*s*s/(3.141592653589793*comm*comm) + 0.5;
             }),
-            batch::constant<option::plotter>(&p) // reference to the plotter object
+            batch::constant<option::end_time, option::plotter>(50, &p) // reference to the plotter object
     );
     // Runs the given simulations.
     batch::run(comp_t{}, init_list);

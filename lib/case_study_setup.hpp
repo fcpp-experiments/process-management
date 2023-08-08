@@ -64,7 +64,7 @@ DECLARE_OPTIONS(list,
     exports<coordination::main_t>, // export type list (types used in messages)
     retain<metric::retain<2>>, // retain time for messages
     round_schedule<round_s>, // the sequence generator for round events on nodes
-    log_schedule<sequence::periodic_n<1, 0, 1, end>>, // the sequence generator for log events on the network
+    log_schedule<log_s>, // the sequence generator for log events on the network
     spawn_schedule<sequence::multiple<i<devices, size_t>, n<0>>>, // the sequence generator of node creation events on the network
     // the basic contents of the node storage
     tuple_store<

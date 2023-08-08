@@ -24,8 +24,9 @@ int main() {
         // The network object type (interactive simulator with given options).
         using net_t = component::interactive_simulator<option::list>::net;
         // The initialisation values (simulation name, non-deterministic threshold, device speed, plotter object).
-        auto init_v = common::make_tagged_tuple<option::name, option::tvar, option::dens, option::hops, option::speed, option::side, option::devices, option::seed, option::plotter>(
+        auto init_v = common::make_tagged_tuple<option::name, option::end_time, option::tvar, option::dens, option::hops, option::speed, option::side, option::devices, option::seed, option::plotter>(
             "Dispatch of Peer-to-peer Messages (" + to_string(dens) + " dev/neigh, " + to_string(hops) + " hops, " + to_string(speed) + "% speed, " + to_string(tvar) + "% tvar)",
+            1000,
             tvar,
             dens,
             hops,

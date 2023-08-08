@@ -49,10 +49,10 @@ using test_store_t = tuple_store<
 template <template<class> class T, typename S>
 using test_func_t = log_functors<
     avg_delay<T<S>>,    functor::div<aggregator::only_finite<aggregator::sum<first_delivery_tot<T<S>>>>, aggregator::sum<delivery_count<T<S>>>>,
-    avg_size<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_msg_size<T<S>>>>, distribution::constant<i<devices>>>,
-    avgtot_size<T<S>>,  functor::div<functor::div<aggregator::sum<tot_msg_size<T<S>>>, distribution::constant<i<devices>>>, n<end>>,
-    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>>>, distribution::constant<i<devices>>>,
-    avgtot_proc<T<S>>,  functor::div<functor::div<aggregator::sum<tot_proc<T<S>>>, distribution::constant<i<devices>>>, n<end>>
+    avg_size<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_msg_size<T<S>>>>, i<devices>>,
+    avgtot_size<T<S>>,  functor::div<functor::div<aggregator::sum<tot_msg_size<T<S>>>, i<devices>>, i<end_time>>,
+    avg_proc<T<S>>,     functor::div<functor::diff<aggregator::sum<tot_proc<T<S>>>>, i<devices>>,
+    avgtot_proc<T<S>>,  functor::div<functor::div<aggregator::sum<tot_proc<T<S>>>, i<devices>>, i<end_time>>
 >;
 
 //! @brief Overall options (aggregator, storage, functors) for given tests.
@@ -87,7 +87,7 @@ template <typename S, typename... Ts>
 using single_plot_t = plot::split<S, plot::join<Ts>...>;
 
 //! @brief Overall row of plots.
-template <typename S, bool is_time = std::is_same<S,plot::time>::value, size_t t0 = is_time ? 0 : end>
+template <typename S, bool is_time = std::is_same<S,plot::time>::value, size_t t0 = is_time ? 0 : 50>
 using row_plot_t = plot::join<
 #ifdef ALLPLOTS
     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<max_proc, aggregator::max<int>>>>,
@@ -176,7 +176,8 @@ DECLARE_OPTIONS(list,
         devices,            i<devices>,
         tvar,               functor::div<i<tvar>, n<100>>,
         tavg,               distribution::weibull<n<period>, functor::mul<i<tvar>, n<period, 100>>>,
-        hops,               i<hops>
+        hops,               i<hops>,
+        end_time,           i<end_time>
     >,
     // general parameters to use for plotting
     extra_info<

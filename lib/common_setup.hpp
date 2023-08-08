@@ -34,9 +34,6 @@ constexpr size_t comm = 100;
 //! @brief Dimensionality of the space.
 constexpr size_t dim = 3;
 
-//! @brief End of simulated time.
-constexpr size_t end = 100;
-
 //! @brief Standard deviation for distance estimations.
 constexpr size_t dist_dev = 30;
 
@@ -59,6 +56,10 @@ namespace option {
 using namespace component::tags;
 //! @brief Import tags used by aggregate functions.
 using namespace coordination::tags;
+
+
+//! @brief Tag for the end of simulated time.
+struct end_time {};
 
 
 //! @brief Struct holding default values for simulation parameters.
@@ -121,11 +122,11 @@ using i = distribution::constant_i<R, T>;
 using round_s = sequence::periodic<
     distribution::interval_n<times_t, 0, 1>,
     distribution::weibull<i<tavg>, functor::mul<i<tvar>, i<tavg>>>,
-    distribution::constant_n<times_t, end + 5*period>
+    functor::add<i<end_time>, n<5*period>>
 >;
 
 //! @brief The periodic sequence of network logging events (one every second).
-using log_s = sequence::periodic<n<0>, n<1>, n<end>>;
+using log_s = sequence::periodic<n<0>, n<1>, i<end_time>>;
 
 //! @brief The distribution of initial node positions (random in a given rectangle).
 using rectangle_d = distribution::rect<n<0>, n<0>, n<20>, i<side>, i<side>, n<20>>;
