@@ -111,7 +111,8 @@ DECLARE_OPTIONS(list,
         num_svc_types,      n<max_svc_id>,         
         offered_svc,        nu<max_svc_id>,
         svc_rank,           nu<1>,
-        hops,               i<hops>
+        hops,               i<hops>,
+        end_time,           i<end_time>
     >,
     // general parameters to use for plotting
     extra_info<
