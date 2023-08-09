@@ -4,6 +4,10 @@ string name = "batch";
 import "plot.asy" as plot;
 unitsize(1cm);
 
+plot.MAX_CROP = 1.01;
+plot.LOG_LIN = 3;
+plot.SUBPLOT = false;
+
 plot.ROWS = 5;
 plot.COLS = 5;
 
