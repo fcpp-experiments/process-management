@@ -68,8 +68,7 @@ FUN common::option<message> get_disco_message(ARGS, size_t devices) {
     common::option<message> m;
 
     // TODO: limited to one message from a specific device at aspecific time
-    // if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
-    if (node.uid >= devices-2 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
+    if (node.uid == devices-1 && node.current_time() > 10 && node.storage(tags::sent_count{}) == 0) {
         // generate a discovery message for a random service type
         m.emplace(node.uid, 0, node.current_time(), 0.0, msgtype::DISCO, node.next_int(node.storage(tags::num_svc_types{}) - 1));
         node.storage(tags::sent_count{}) += 1;
@@ -112,11 +111,10 @@ GEN(T) message_log_type spherical_discovery(ARGS, common::option<message> const&
         status s = status::internal;
 
         // if I offer a service matching the request, I reply by producing output
-        // if (node.uid==455 && m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
         if (m.svc_type == node.storage(tags::offered_svc{})) s = status::internal_output;
 
         return make_tuple(node.current_time(), s); 
-    }, m, node.storage(tags::infospeed{}), render, 0, 0);
+    }, m, 2.5, render, 0, 0);
 
     return r;
 }
@@ -210,8 +208,6 @@ GEN(T,S) message_log_type tree_message_data(ARGS, common::option<message> const&
     message_log_type r = spawn_profiler(CALL, tags::tree<T>{}, [&](message const &m) {
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(m.to) > 0;
-//            status s = m.to == node.uid && (node.uid == 577 || node.uid == 55) ?
-//            status s = m.to == node.uid && (node.uid == 55) ?
             status s = m.to == node.uid ?  
                     status::terminated_output :
                     source_path or dest_path ? status::internal : status::external;
@@ -324,7 +320,6 @@ FUN void device_automaton(ARGS, parametric_status_t &parst) { CODE
         break;
     case devstatus::SERVED:
         if (rdt.size() and (*rdt.begin()).first.type==msgtype::DATAEND) { // if all file received, transition back to IDLE
-        // if (rdt.size()) { // if all file received, transition back to IDLE
             parst.first = devstatus::IDLE;
         }
         break;
@@ -345,8 +340,7 @@ MAIN() {
     old(CALL, parametric_status_t{devstatus::IDLE, message{}}, [&](parametric_status_t parst) {
         // basic node rendering
         bool is_src = false;
-        // bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
-        bool highlight = is_src or node.uid >= node.storage(devices{}) - 2;
+        bool highlight = is_src or node.uid >= node.storage(devices{}) - 1;
         node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
         node.storage(node_size{}) = highlight ? 30 : 20;
         // clear up stats data
@@ -361,6 +355,8 @@ MAIN() {
         node.storage(node_color{}) = status_color(st, proc_num);
         node.storage(left_color{}) = status_color(st, proc_num);
         node.storage(right_color{}) = status_color(st, proc_num);
+
+        if (st != devstatus::IDLE) node.storage(node_size{}) = 30;
 
         while (proc_num--) node.storage(node_size{}) *= 1.5;
 

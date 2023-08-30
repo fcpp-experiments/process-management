@@ -13,7 +13,7 @@ if [ "$1" == "plots" ]; then
     cat plot/batch.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/bloom batch.asy"
     rm plot/batch.{asy,pdf}
     cd plot
-    asy {sphere,tree,bloom}" batch.asy" -f pdf
+    asy -mask {sphere,tree,bloom}" batch.asy" -f pdf
     cd ..
 elif [ "$1" == "window" ]; then
     fcpp/src/make.sh gui run -O -DNOTREE -DGRAPHICS graphic
@@ -24,7 +24,7 @@ elif [ "$1" == "window" ]; then
     cat plot/graphic.asy | sed 's|plot.ROWS = 1|plot.ROWS = 5|g' > "plot/bloom graphic.asy"
     rm plot/graphic.{asy,pdf}
     cd plot
-    asy {sphere,tree,bloom}" graphic.asy" -f pdf
+    asy -mask {sphere,tree,bloom}" graphic.asy" -f pdf
     cd ..
 else
     if [ "$1" == "" ]; then
