@@ -152,6 +152,13 @@ Hovering on a node will also display its UID in the top-left corner.
 
 ```./make.sh window```
 
+Runs a single test simulation with GUI for each of the following scenarios:
+- spherical topology
+- tree topology
+- tree topology exploiting Bloom filters
+
+PDF plots will be produced in the `plot/` directory, and the textual output will be saved in the `output/` directory.
+
 #### Graphical description
 
 - **TODO:** describe graphical notation
@@ -175,7 +182,7 @@ See also the namespace `tag` in file `lib/generals.hpp` (where, e.g., struct `ma
 
 ### Case Study
 
-```./make.sh gui run -O [-DBLOOM] case_study```
+```./make.sh gui run -O -DGRAPHIC [-DBLOOM] case_study```
 
 
 The essence of the Case Study (target ```case_study```) consists of the following scenario, based on a network of nodes:
