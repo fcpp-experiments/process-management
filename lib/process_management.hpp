@@ -90,7 +90,7 @@ GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent,
         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
         bool dest_path = below.count(m.to) > 0;
         status s = node.uid == m.to ? status::terminated_output :
-                   source_path or dest_path ? status::internal : status::external;
+                   source_path or dest_path ? status::internal : status::external_deprecated;
         return make_tuple(node.current_time(), s);
     }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
 }
