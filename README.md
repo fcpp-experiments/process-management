@@ -66,66 +66,6 @@ xcode-select --install
 brew install cmake asymptote doxygen
 ```
 
-### Docker container
-
-**Warning:** the graphical simulations are based on OpenGL, which is **not** available in the Docker container. Use this system for batch simulations only.
-
-Download Docker from [https://www.docker.com](https://www.docker.com), then you can download the Docker container from GitHub by typing the following command in a terminal:
-```
-docker pull docker.pkg.github.com/fcpp/fcpp/container:1.0
-```
-Alternatively, you can build the container yourself with the following command:
-```
-docker build -t docker.pkg.github.com/fcpp/fcpp/container:1.0 .
-```
-Once you have the Docker container locally available, type the following command to enter the container:
-```
-docker run -it --volume $PWD:/fcpp --workdir /fcpp docker.pkg.github.com/fcpp/fcpp/container:1.0 bash
-```
-and the following command to exit it:
-```
-exit
-```
-In order to properly link the executables in Docker, you may need to add the `-pthread` option (substitute `-O` for `-O -pthread` below).
-
-### Vagrant container
-
-**Warning:** the graphical simulations are based on OpenGL, which is **not** available in the Vagrant container. Use this system for batch simulations only.
-
-Download Vagrant from [https://www.vagrantup.com](https://www.vagrantup.com) and VirtualBox from [https://www.virtualbox.org](https://www.virtualbox.org), then type the following commands in a terminal to enter the Vagrant container:
-```
-vagrant up
-vagrant ssh
-cd fcpp
-```
-and the following commands to exit it:
-```
-exit
-vagrant halt
-```
-
-### Virtual Machines
-
-If you use a VM with a graphical interface, refer to the section for the operating system installed on it.
-
-**Warning:** the graphical simulations are based on OpenGL, and common Virtual Machine software (e.g., VirtualBox) has faulty support for OpenGL. If you rely on a virtual machine for graphical simulations, it might work provided that you select hardware virtualization (as opposed to software virtualization). However, it is recommended to use the native OS whenever possible.
-
-
-## Execution
-
-In order to execute the simulations, type the following command in a terminal:
-```
-> ./make.sh [gui] run -O [targets...]
-```
-You can omit the `gui` argument if you don't need the graphical user interface; or omit the `-O` argument for a debug build (instead of an optimised build). On newer Mac M1 computers, the `-O` argument may induce compilation errors: in that case, use the `-O3` argument instead.
-The possible targets are:
-- `all` (for running all targets)
-- `batch` (produces plots) runs a batch of experiments of process management
-- `graphic` (with GUI, produces plots) runs a graphic process management experiment based on the provided parameters
-- `case_study` (with GUI, produces plots) runs a more complex process management use case described below
-
-Running the above command, you should see output about building the executables and running them, graphical simulations should pop up (if there are any in the targets), PDF plots should be produced in the `plot/` directory (if any are produced by the targets), and the textual output will be saved in the `output/` directory.
-
 ### Graphical User Interface
 
 Executing a graphical simulation will open a window displaying the simulation scenario, initially still: you can start running the simulation by pressing `P` (current simulated time is displayed in the bottom-left corner). While the simulation is running, network statistics may be periodically printed in the console, and be possibly aggregated in form of an Asymptote plot at simulation end. You can interact with the simulation through the following keys:
@@ -184,7 +124,6 @@ See also the namespace `tag` in file `lib/generals.hpp` (where, e.g., struct `ma
 
 ```./make.sh gui run -O -DGRAPHIC [-DBLOOM] case_study```
 
-
 The essence of the Case Study (target ```case_study```) consists of the following scenario, based on a network of nodes:
 
 - when idle, a node _n_ may decide to broadcast a discovery message for a service _S_
@@ -229,6 +168,4 @@ The following are current restrictions to the scenario that may be lifted in fut
 - only _one discovery message_ is actually generated during the _whole use case execution_. The request is created by the device with id _(N-1)_ (where _N_ is the number of devices) at time (round) _T=11_ (this delay has the purpose to let the tree topology computation stabilize)
 - the offer accepted is always the first one received by a device in the _DISCO_ state; in case two or more offers are received at the same time by a device in _DISCO_ state, one of them is arbitrarily chosen to be accepted
 - the file sent by a service after its offer has been accepted has a length of exactly _1 message_
- 
-#### Statistics
 
