@@ -108,10 +108,10 @@ template<template<class> class T> class termination_overhead<T<tags::wispp>> : p
 FUN_EXPORT termination_logic_t = export_list<bool, monotonic_distance_t>;
 
 //! @brief Result type of spawn calls with messages as keys.
-using message_log_type = std::unordered_map<message, times_t>;
+using message_log_type = std::unordered_map<message, times_t, common::hash<message>>;
 
 //! @brief Result type of spawn calls.
-using key_log_type = std::unordered_map<device_t, message>;
+using key_log_type = std::unordered_map<device_t, message, common::hash<device_t>>;
 
 
 //! @brief Computes stats on message delivery and active processes.
