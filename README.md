@@ -97,12 +97,6 @@ Runs a single test simulation with GUI for each of the following scenarios:
 - tree topology
 - tree topology exploiting Bloom filters
 
-PDF plots will be produced in the `plot/` directory, and the textual output will be saved in the `output/` directory.
-
-#### Graphical description
-
-- **TODO:** describe graphical notation
-
 #### Parameters (cf. plots)
 
 - **dens** density of the network as avg number of neighbours
@@ -120,9 +114,24 @@ PDF plots will be produced in the `plot/` directory, and the textual output will
 
 See also the namespace `tag` in file `lib/generals.hpp` (where, e.g., struct `max_msg_size` turns into extracted metric `mmsize`).
 
+### Batch 
+
+```./make.sh plots```
+
+Runs a **huge** number of experiments without GUI for each of the following scenarios:
+- spherical topology
+- tree topology
+- tree topology exploiting Bloom filters
+
+The resulting PDF plots will be produced in the `plot/` directory.
+
+For *parameters* and *metrics* see the previous section.
+
 ### Case Study
 
 ```./make.sh gui run -O -DGRAPHIC [-DBLOOM] case_study```
+
+The optional ```BLOOM``` parameter enables Bloom filters.
 
 The essence of the Case Study (target ```case_study```) consists of the following scenario, based on a network of nodes:
 
@@ -138,10 +147,6 @@ The essence of the Case Study (target ```case_study```) consists of the followin
 Overall, the above steps are summarized by the following state machine:
 
 ![nodes-automa](https://github.com/fcpp-experiments/process-management/assets/1214215/65f1cbb6-2db8-42bf-b968-8de679e87d60)
-
-#### Graphical description
-
-- **TODO:** describe graphical notation
 
 #### Configuration
 
