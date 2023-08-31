@@ -42,7 +42,7 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::legacy>)
         return any_hood(CALL, nbr(CALL, ot), ot) or terminating;
      });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-    if (exiting) s = status::external;
+    if (exiting) s = status::external_deprecated;
     else if (terminating) s = status::internal_output;
 }
 //! @brief Overhead of the legacy termination logic.
@@ -56,7 +56,7 @@ void termination_logic(ARGS, status& s, real_t, message const&, T<tags::share>) 
         return any_hood(CALL, nt) or terminating;
     });
     bool exiting = all_hood(CALL, nbr(CALL, terminated), terminated);
-    if (exiting) s = status::external;
+    if (exiting) s = status::external_deprecated;
     else if (terminating) s = status::internal_output;
 }
 //! @brief Overhead of the share termination logic.
@@ -152,10 +152,10 @@ FUN_EXPORT proc_stats_t = export_list<message_log_type>;
 //! @brief Wrapper calling a spawn function with a given process and key set, while tracking the processes executed.
 GEN(T,G,S) message_log_type spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, int render, size_t base_overhead, size_t variable_overhead) {
     // dispatches messages
-    message_log_type r = spawn(node, call_point, [&](message const& m){
+    message_log_type r = spawn_deprecated(node, call_point, [&](message const& m){
         auto r = process(m);
         termination_logic(CALL, get<1>(r), v, m, T{});
-        real_t key = get<1>(r) == status::external ? 0.5 : 1;
+        real_t key = get<1>(r) == status::external_deprecated ? 0.5 : 1;
         node.storage(tags::proc_data{}).push_back(color::hsva(m.data * 360, key, key));
         return r;
     }, std::forward<S>(key_set));

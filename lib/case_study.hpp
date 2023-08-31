@@ -173,7 +173,7 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
             bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
             bool dest_path = below.count(k) > 0;
             status s = (to or chosen == node.uid) ? status::terminated_output :
-                       (source_path or dest_path) ? status::internal : status::external;
+                       (source_path or dest_path) ? status::internal : status::border;
 
             auto rp = make_tuple(m, s); 
 
@@ -192,7 +192,7 @@ GEN(T,S) key_log_type tree_message(ARGS, common::option<device_t> const& k, para
                 }
             }
 
-            real_t key = get<1>(rp) == status::external ? 0.5 : 1;
+            real_t key = get<1>(rp) == status::border ? 0.5 : 1;
             node.storage(tags::proc_data{}).push_back(color::hsva(100, key, key));
 
             return rp;
@@ -210,7 +210,7 @@ GEN(T,S) message_log_type tree_message_data(ARGS, common::option<message> const&
             bool dest_path = below.count(m.to) > 0;
             status s = m.to == node.uid ?  
                     status::terminated_output :
-                    source_path or dest_path ? status::internal : status::external;
+                    source_path or dest_path ? status::internal : status::border;
 
             return make_tuple(node.current_time(), s); 
         }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
