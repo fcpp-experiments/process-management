@@ -259,7 +259,7 @@ FUN device_t flex_parent(ARGS, bool source, real_t radius) { CODE
         if (old_d == new_d or new_d == 0 or
             old_d > max(2*new_d, radius) or new_d > max(2*old_d, radius))
             return make_tuple(new_d, new_i);
-        if (details::self(node.nbr_dist(), old_i) == INF or get<0>(details::self(x, old_i)) > old_d)
+        if (fcpp::details::self(node.nbr_dist(), old_i) == INF or get<0>(fcpp::details::self(x, old_i)) > old_d)
             old_i = new_i;
         if (get<0>(slopeinfo) > 1 + epsilon)
             return make_tuple(get<1>(slopeinfo) + get<2>(slopeinfo) * (1 + epsilon), new_i);
