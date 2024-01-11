@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "lib/xc_processes.hpp"
-#include "lib/xc_setup.hpp"
+#include "lib/simulation_setup.hpp"
 
 using namespace fcpp;
 

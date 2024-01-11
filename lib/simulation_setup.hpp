@@ -161,10 +161,10 @@ DECLARE_OPTIONS(list,
     >,
     // further options for each test
 #ifndef NOSPHERE
-    test_option_t<spherical, legacy, share, ispp, wispp>,
+    test_option_t<spherical, legacy, share, ispp, wispp, xc>,
 #endif
 #ifndef NOTREE
-    test_option_t<tree,      legacy, share, ispp, wispp>,
+    test_option_t<tree,      legacy, share, ispp, wispp, xc>,
 #endif
     // data initialisation
     init<

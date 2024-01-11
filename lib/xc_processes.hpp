@@ -12,7 +12,10 @@
 
 #include "lib/common/option.hpp"
 #include "lib/component/calculus.hpp"
+#include "lib/option/distribution.hpp"
+
 #include "lib/generals.hpp"
+#include "lib/simulation_setup.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -76,7 +79,7 @@ FUN common::option<message> get_message(ARGS, size_t devices) {
 
 //! @brief Result type of spawn calls dispatching messages.
 // TODO ****check --> should be size_t
-using message_log_type = std::unordered_map<message, double>;
+using message_log_type = std::unordered_map<message, double, fcpp::common::hash<message>>;
 //using message_log_type = std::unordered_map<message, bool>;
 
 //! @brief Computes stats on message delivery and active processes.
