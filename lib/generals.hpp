@@ -118,6 +118,9 @@ namespace tags {
     template <typename T>
     struct tree {};
 
+    //! @brief Channel process.
+    template <typename T>
+    struct channel {};
 
     //! @brief The maximum number of processes ever run by the node.
     template <typename T>

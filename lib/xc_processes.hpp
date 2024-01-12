@@ -142,25 +142,6 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, 
 
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
-    #ifdef ALG_INFOSPEED
-    spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
-        bool source = m.from == node.uid and old(CALL, true, false);
-        double ds = monotonic_distance(CALL, source, node.nbr_dist());
-        double dt = monotonic_distance(CALL, source, node.nbr_lag());
-
-        field<real_t> fdds = nbr(CALL, ds);
-        //field<real_t> fddt = nbr(CALL, dt);
-        field<real_t> fddt = dt + period - node.nbr_lag();
-
-        field<bool> fdnslow = (fdds >= v * comm / period * (fddt - node.nbr_lag()));
-        fdnslow = mod_other(CALL, fdnslow, true);
-        if (node.uid == m.to)
-            fdnslow = mod_self(CALL, fdnslow, false);
-
-        return make_tuple(node.current_time(), fdnslow);
-
-    }, m, node.storage(tags::infospeed{}), render);
-    #else
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
         bool source = m.from == node.uid;
         double dt = monotonic_distance(CALL, source, node.nbr_lag());
@@ -187,9 +168,39 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
         return make_tuple(node.current_time(), fdwav);
 
     }, m, node.storage(tags::infospeed{}), render);
-    #endif
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
+
+//! @brief Makes test for channel processes.
+GEN(T) void channel_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+    spawn_profiler(CALL, tags::channel<T>{}, [&](message const& m, real_t v){
+        bool source = m.from == node.uid;
+        double dt = monotonic_distance(CALL, source, node.nbr_lag());
+        field<real_t> fddt = nbr(CALL, dt);
+
+        field<bool> fdwav;
+        
+        fdwav = (fddt >= dt);
+        fdwav = mod_self(CALL, fdwav, false);
+
+        bool dest = m.to == node.uid;
+        int rnd = counter(CALL);
+
+        if (dest) {
+            fdwav = field<bool>(false);
+        } else if (rnd == 1) {
+            fdwav = field<bool>(false);
+            fdwav = mod_self(CALL, fdwav, true);
+            fdwav = mod_other(CALL, fdwav, true);
+        } else {
+             fdwav = field<bool>(false);
+        }
+
+        return make_tuple(node.current_time(), fdwav);
+
+    }, m, node.storage(tags::infospeed{}), render);
+}
+FUN_EXPORT channel_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -208,10 +219,16 @@ MAIN() {
     // random message with 1% probability during time [10..50]
     common::option<message> m = get_message(CALL, node.storage(devices{}));
 
+    #ifndef NOSPHERE
     spherical_test(CALL, m, xc{}, true);
+    #endif
+    #ifndef NOCHANNEL
+    channel_test(CALL, m, xc{}, true);
+    #endif
+
 }
 //! @brief Exports for the main function.
-struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, flex_parent_t, real_t> {};
+struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, channel_test_t, flex_parent_t, real_t> {};
 
 
 } // coordination

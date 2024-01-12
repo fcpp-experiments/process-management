@@ -162,6 +162,9 @@ using lines_t = plot::join<
 #ifndef NOSPHERE
     test_lines_t<T, A, spherical, xc>,
 #endif
+#ifndef NOCHANNEL
+    test_lines_t<T, A, channel, xc>,
+#endif
     plot::none
 >;
 
@@ -244,6 +247,9 @@ DECLARE_OPTIONS(list,
     // further options for each test
 #ifndef NOSPHERE
     test_option_t<spherical, xc>,
+#endif
+#ifndef NOCHANNEL
+    test_option_t<channel, xc>,
 #endif
     // data initialisation
     init<
