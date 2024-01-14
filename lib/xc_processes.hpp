@@ -143,15 +143,7 @@ FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, 
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
-        bool source = m.from == node.uid;
-        double dt = monotonic_distance(CALL, source, node.nbr_lag());
-        field<real_t> fddt = nbr(CALL, dt);
-
-        field<bool> fdwav;
-        
-        fdwav = (fddt >= dt);
-        fdwav = mod_self(CALL, fdwav, false);
-
+        field<bool> fdwav;       
         bool dest = m.to == node.uid;
         int rnd = counter(CALL);
 
@@ -171,17 +163,33 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
-//! @brief Makes test for tree processes.
-GEN(T) void tree_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
-    spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
-        bool source = m.from == node.uid;
-        double dt = monotonic_distance(CALL, source, node.nbr_lag());
-        field<real_t> fddt = nbr(CALL, dt);
+// //! @brief Makes test for tree processes.
+// GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, S const& below, size_t set_size, T, int render = -1) { CODE
+//     // clear up stats data
+//     node.storage(tags::proc_data{}).clear();
+//     node.storage(tags::proc_data{}).push_back(color::hsva(0, 0, 0.3, 1));
 
-        field<bool> fdwav;
-        
-        fdwav = (fddt >= dt);
-        fdwav = mod_self(CALL, fdwav, false);
+//     spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m){
+//         bool source_path = any_hood(CALL, nbr(CALL, parent) == node.uid) or node.uid == m.from;
+//         bool dest_path = below.count(m.to) > 0;
+//         status s = node.uid == m.to ? status::terminated_output :
+//                    source_path or dest_path ? status::internal : status::external_deprecated;
+//         return make_tuple(node.current_time(), s);
+//     }, m, 0.3, render, set_size + 2*sizeof(trace_t) + sizeof(real_t) + sizeof(device_t), sizeof(trace_t));
+// }
+// //! @brief Exports for the main function.
+// FUN_EXPORT tree_test_t = export_list<spawn_profiler_t>;
+
+using set_t = std::unordered_set<device_t>;
+
+//! @brief Makes test for tree processes.
+GEN(T,S) void tree_test(ARGS, common::option<message> const& m, field<device_t> parent, field<S> const& below, size_t set_size, T, int render = -1) { CODE
+    spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
+        //field<bool> source_path = map_hood([&] (S b) {b.count(m.from) > 0;}, below); 
+        field<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, below);
+        field<bool> dest_path = map_hood([&] (S b) {return (b.count(m.to) > 0);}, below);
+
+        field<bool> fdwav;       
 
         bool dest = m.to == node.uid;
         int rnd = counter(CALL);
@@ -189,16 +197,15 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, T, bool render = f
         if (dest) {
             fdwav = field<bool>(false);
         } else if (rnd == 1) {
-            fdwav = field<bool>(false);
-            fdwav = mod_self(CALL, fdwav, true);
-            fdwav = mod_other(CALL, fdwav, true);
+            fdwav = source_path || dest_path;
+            fdwav = mod_other(CALL, fdwav, false);
         } else {
              fdwav = field<bool>(false);
         }
 
         return make_tuple(node.current_time(), fdwav);
 
-    }, m, node.storage(tags::infospeed{}), render);
+    }, m, 0.3, render);
 }
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
@@ -226,14 +233,18 @@ MAIN() {
     #endif
     #ifndef NOTREE
     // spanning tree definition
-    device_t parent = flex_parent(CALL, is_src, comm);
+    field<device_t> parent = flex_parent(CALL, is_src, comm);
     // routing sets along the tree
-    set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const& y){
+    field<set_t> below = parent_collection(CALL, self(CALL, parent), set_t{node.uid}, [](set_t x, set_t const& y){
         x.insert(y.begin(), y.end());
         return x;
     });
 
-    tree_test(CALL, m, xc{}, true);
+    common::osstream os;
+    os << below;
+
+    tree_test(CALL, m, parent, below, os.size(), xc{});
+
     #endif
 
 }
