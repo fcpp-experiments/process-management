@@ -202,6 +202,8 @@ GEN(T) void tree_test(ARGS, common::option<message> const& m, T, bool render = f
 }
 FUN_EXPORT tree_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
+using set_t = std::unordered_set<device_t>;
+
 //! @brief Main case study function.
 MAIN() {
     // import tags for convenience
@@ -223,12 +225,20 @@ MAIN() {
     spherical_test(CALL, m, xc{}, true);
     #endif
     #ifndef NOTREE
+    // spanning tree definition
+    device_t parent = flex_parent(CALL, is_src, comm);
+    // routing sets along the tree
+    set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const& y){
+        x.insert(y.begin(), y.end());
+        return x;
+    });
+
     tree_test(CALL, m, xc{}, true);
     #endif
 
 }
 //! @brief Exports for the main function.
-struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, tree_test_t, flex_parent_t, real_t> {};
+struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, tree_test_t, flex_parent_t, parent_collection_t<set_t>, real_t> {};
 
 
 } // coordination
