@@ -162,8 +162,8 @@ using lines_t = plot::join<
 #ifndef NOSPHERE
     test_lines_t<T, A, spherical, xc>,
 #endif
-#ifndef NOCHANNEL
-    test_lines_t<T, A, channel, xc>,
+#ifndef NOTREE
+    test_lines_t<T, A, tree, xc>,
 #endif
     plot::none
 >;
@@ -248,8 +248,8 @@ DECLARE_OPTIONS(list,
 #ifndef NOSPHERE
     test_option_t<spherical, xc>,
 #endif
-#ifndef NOCHANNEL
-    test_option_t<channel, xc>,
+#ifndef NOTREE
+    test_option_t<tree, xc>,
 #endif
     // data initialisation
     init<

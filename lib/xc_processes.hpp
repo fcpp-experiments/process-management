@@ -171,9 +171,9 @@ GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool rende
 }
 FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
-//! @brief Makes test for channel processes.
-GEN(T) void channel_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
-    spawn_profiler(CALL, tags::channel<T>{}, [&](message const& m, real_t v){
+//! @brief Makes test for tree processes.
+GEN(T) void tree_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
+    spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
         bool source = m.from == node.uid;
         double dt = monotonic_distance(CALL, source, node.nbr_lag());
         field<real_t> fddt = nbr(CALL, dt);
@@ -200,7 +200,7 @@ GEN(T) void channel_test(ARGS, common::option<message> const& m, T, bool render 
 
     }, m, node.storage(tags::infospeed{}), render);
 }
-FUN_EXPORT channel_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
+FUN_EXPORT tree_test_t = export_list<spawn_profiler_t, double, monotonic_distance_t, bool, int>;
 
 //! @brief Main case study function.
 MAIN() {
@@ -222,13 +222,13 @@ MAIN() {
     #ifndef NOSPHERE
     spherical_test(CALL, m, xc{}, true);
     #endif
-    #ifndef NOCHANNEL
-    channel_test(CALL, m, xc{}, true);
+    #ifndef NOTREE
+    tree_test(CALL, m, xc{}, true);
     #endif
 
 }
 //! @brief Exports for the main function.
-struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, channel_test_t, flex_parent_t, real_t> {};
+struct main_t : public export_list<rectangle_walk_t<3>, spherical_test_t, tree_test_t, flex_parent_t, real_t> {};
 
 
 } // coordination
