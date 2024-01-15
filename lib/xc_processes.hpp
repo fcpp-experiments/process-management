@@ -183,11 +183,16 @@ FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_di
 using set_t = std::unordered_set<device_t>;
 
 //! @brief Makes test for tree processes.
-GEN(T,S) void tree_test(ARGS, common::option<message> const& m, field<device_t> parent, field<S> const& below, size_t set_size, T, int render = -1) { CODE
+GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, field<S> const& fdbelow, size_t set_size, T, int render = -1) { CODE
     spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
-        //field<bool> source_path = map_hood([&] (S b) {b.count(m.from) > 0;}, below); 
-        field<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, below);
-        field<bool> dest_path = map_hood([&] (S b) {return (b.count(m.to) > 0);}, below);
+        field<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, fdbelow);
+        if (node.uid == node.storage(tags::devices{}) - 1) {
+            std::cout << "sp " << node.uid << " field " << source_path << std::endl;
+        }
+        field<bool> dest_path = map_hood([&] (S b) {return (b.count(m.to) > 0);}, fdbelow);
+        if (node.uid == node.storage(tags::devices{}) - 1) {
+            std::cout << "dp " << node.uid << " field " << dest_path << std::endl;
+        }
 
         field<bool> fdwav;       
 
@@ -197,8 +202,11 @@ GEN(T,S) void tree_test(ARGS, common::option<message> const& m, field<device_t> 
         if (dest) {
             fdwav = field<bool>(false);
         } else if (rnd == 1) {
-            fdwav = source_path || dest_path;
-            fdwav = mod_other(CALL, fdwav, false);
+            fdwav = source_path or dest_path;
+            fdwav = mod_self(CALL, fdwav, true);
+            if (node.uid == node.storage(tags::devices{}) - 1) {
+                std::cout << "node " << node.uid << " field " << fdwav;
+            }
         } else {
              fdwav = field<bool>(false);
         }
@@ -219,8 +227,11 @@ MAIN() {
     size_t l = node.storage(side{});
     rectangle_walk(CALL, make_vec(0,0,20), make_vec(l,l,20), node.storage(speed{}) * comm / period, 1);
 
+    #ifndef NOTREE
+    bool is_src = node.uid == 0;
+    #else
     bool is_src = false;
-    //bool is_src = node.uid == 0;
+    #endif
 
     bool highlight = is_src or node.uid == node.storage(devices{}) - 1;
     node.storage(node_shape{}) = is_src ? shape::icosahedron : highlight ? shape::cube : shape::sphere;
@@ -233,17 +244,23 @@ MAIN() {
     #endif
     #ifndef NOTREE
     // spanning tree definition
-    field<device_t> parent = flex_parent(CALL, is_src, comm);
+    device_t parent = flex_parent(CALL, is_src, comm);
     // routing sets along the tree
-    field<set_t> below = parent_collection(CALL, self(CALL, parent), set_t{node.uid}, [](set_t x, set_t const& y){
+    set_t below = parent_collection(CALL, parent, set_t{node.uid}, [](set_t x, set_t const& y){
         x.insert(y.begin(), y.end());
         return x;
     });
+    field<set_t> fdbelow = nbr(CALL, below); 
+
+    if (node.uid == node.storage(tags::devices{}) - 1) {
+        std::cout << "parent " << parent << std::endl;
+        std::cout << "below " << node.uid << " field " << fdbelow << std::endl;
+    }
 
     common::osstream os;
     os << below;
 
-    tree_test(CALL, m, parent, below, os.size(), xc{});
+    tree_test(CALL, m, parent, fdbelow, os.size(), xc{});
 
     #endif
 
