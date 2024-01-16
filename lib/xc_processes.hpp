@@ -23,7 +23,6 @@
 namespace fcpp {
 
 //! @brief Handles a process, spawning instances of it for every key in the `key_set` and passing general arguments `xs` (overload with field<bool> status).
-//! @brief Handles a process, spawning instances of it for every key in the `key_set` and passing general arguments `xs` (overload with field<bool> status).
 template <typename node_t, typename G, typename S, typename... Ts, typename K = typename std::decay_t<S>::value_type, typename T = std::decay_t<std::result_of_t<G(K const&, Ts const&...)>>, typename R = std::decay_t<tuple_element_t<0,T>>, typename B = std::decay_t<tuple_element_t<1,T>>>
 std::enable_if_t<std::is_same<B,field<bool>>::value, std::unordered_map<K, R>>
 spawn(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... xs) {
@@ -53,6 +52,8 @@ spawn(node_t& node, trace_t call_point, G&& process, S&& key_set, Ts const&... x
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
+template <typename T>
+using nvalue = field<T>;
 
 //! @brief Length of a round
 constexpr size_t period = 1;
@@ -138,23 +139,23 @@ GEN(T,G,S) void spawn_profiler(ARGS, T, G&& process, S&& key_set, real_t v, bool
     proc_stats(CALL, r, render, T{});
 }
 //! @brief Export list for spawn_profiler.
-FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, field<bool>>;
+FUN_EXPORT spawn_profiler_t = export_list<spawn_t<message, bool>, proc_stats_t, nvalue<bool>>;
 
 //! @brief Makes test for spherical processes.
 GEN(T) void spherical_test(ARGS, common::option<message> const& m, T, bool render = false) { CODE
     spawn_profiler(CALL, tags::spherical<T>{}, [&](message const& m, real_t v){
-        field<bool> fdwav;       
+        nvalue<bool> fdwav;       
         bool dest = m.to == node.uid;
         int rnd = counter(CALL);
 
         if (dest) {
-            fdwav = field<bool>(false);
+            fdwav = nvalue<bool>(false);
         } else if (rnd == 1) {
-            fdwav = field<bool>(false);
+            fdwav = nvalue<bool>(false);
             fdwav = mod_self(CALL, fdwav, true);
             fdwav = mod_other(CALL, fdwav, true);
         } else {
-             fdwav = field<bool>(false);
+             fdwav = nvalue<bool>(false);
         }
 
         return make_tuple(node.current_time(), fdwav);
@@ -183,23 +184,23 @@ FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_di
 using set_t = std::unordered_set<device_t>;
 
 //! @brief Makes test for tree processes.
-GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, field<S> const& fdbelow, size_t set_size, T, int render = -1) { CODE
+GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, nvalue<S> const& fdbelow, size_t set_size, T, int render = -1) { CODE
     spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
-        field<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, fdbelow);
-        field<bool> dest_path = map_hood([&] (S b) {return (b.count(m.to) > 0);}, fdbelow);
+        nvalue<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, fdbelow);
+        nvalue<bool> dest_path = map_hood([&] (S b) {return (b.count(m.to) > 0);}, fdbelow);
 
-        field<bool> fdwav;       
+        nvalue<bool> fdwav;       
 
         bool dest = m.to == node.uid;
         int rnd = counter(CALL);
 
         if (dest) {
-            fdwav = field<bool>(false);
+            fdwav = nvalue<bool>(false);
         } else if (rnd == 1) {
             fdwav = source_path or dest_path;
             fdwav = mod_self(CALL, fdwav, true);
         } else {
-             fdwav = field<bool>(false);
+            fdwav = nvalue<bool>(false);
         }
 
         return make_tuple(node.current_time(), fdwav);
@@ -241,7 +242,7 @@ MAIN() {
         x.insert(y.begin(), y.end());
         return x;
     });
-    field<set_t> fdbelow = nbr(CALL, below); 
+    nvalue<set_t> fdbelow = nbr(CALL, below); 
 
     common::osstream os;
     os << below;
