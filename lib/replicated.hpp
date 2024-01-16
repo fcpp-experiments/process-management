@@ -24,17 +24,17 @@ namespace coordination {
  * Generic algorithm replicator, returning the value of the oldest
  * replica currently running.
  *
- * @param fun The aggregate code to replicate.
  * @param n   The number of replicas.
  * @param t   The interval between replica spawning.
+ * @param fun The aggregate code to replicate.
  * @param xs  Arguments for the aggregate code.
  */
-GEN(F, ... Ts) auto replicate(ARGS, F fun, size_t n, times_t t, Ts const&... xs) { CODE
+GEN(F, ... Ts) auto replicate(ARGS, size_t n, times_t t, F fun, Ts const&... xs) { CODE
     size_t now = shared_clock(CALL) / t;
     auto res = spawn(CALL, [&](size_t i){
         return make_tuple(fun(CALL, xs...), i > now - n);
     }, common::option<size_t, true>{now});
-    for (auto x : res) now = min(now, x.first);
+    for (auto x : res) if (x.first > now - n) now = min(now, x.first);
     return res[now];
 }
 //! @brief Export list for replicate.
@@ -43,7 +43,7 @@ FUN_EXPORT replicate_t = export_list<spawn_t<size_t, bool>, shared_clock_t>;
 
 //! @brief Finally/somewhere operator, implemented by replicating .
 FUN bool somewhere(ARGS, bool f, size_t replicas, real_t diameter, real_t infospeed) { CODE
-    return replicate(CALL, logic::EP, replicas, diameter / infospeed / (replicas-1), f);
+    return replicate(CALL, replicas, diameter / infospeed / (replicas-1), logic::EP, f);
 }
 FUN_EXPORT somewhere_t = export_list<replicate_t, past_ctl_t>;
 
