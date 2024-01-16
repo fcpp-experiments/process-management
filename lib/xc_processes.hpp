@@ -186,13 +186,7 @@ using set_t = std::unordered_set<device_t>;
 GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent, field<S> const& fdbelow, size_t set_size, T, int render = -1) { CODE
     spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
         field<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, fdbelow);
-        if (node.uid == node.storage(tags::devices{}) - 1) {
-            std::cout << "sp " << node.uid << " field " << source_path << std::endl;
-        }
         field<bool> dest_path = map_hood([&] (S b) {return (b.count(m.to) > 0);}, fdbelow);
-        if (node.uid == node.storage(tags::devices{}) - 1) {
-            std::cout << "dp " << node.uid << " field " << dest_path << std::endl;
-        }
 
         field<bool> fdwav;       
 
@@ -204,9 +198,6 @@ GEN(T,S) void tree_test(ARGS, common::option<message> const& m, device_t parent,
         } else if (rnd == 1) {
             fdwav = source_path or dest_path;
             fdwav = mod_self(CALL, fdwav, true);
-            if (node.uid == node.storage(tags::devices{}) - 1) {
-                std::cout << "node " << node.uid << " field " << fdwav;
-            }
         } else {
              fdwav = field<bool>(false);
         }
@@ -251,11 +242,6 @@ MAIN() {
         return x;
     });
     field<set_t> fdbelow = nbr(CALL, below); 
-
-    if (node.uid == node.storage(tags::devices{}) - 1) {
-        std::cout << "parent " << parent << std::endl;
-        std::cout << "below " << node.uid << " field " << fdbelow << std::endl;
-    }
 
     common::osstream os;
     os << below;

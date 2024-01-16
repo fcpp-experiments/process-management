@@ -69,7 +69,7 @@ struct var_def_t<hops> {
 #ifndef NOSPHERE
     constexpr static size_t value = 20;
 #else
-    constexpr static size_t value = 10;
+    constexpr static size_t value = 20;
 #endif
 };
 
@@ -79,7 +79,7 @@ struct var_def_t<speed> {
 #ifndef NOTREE
     constexpr static size_t value = 0;
 #else
-    constexpr static size_t value = 10;
+    constexpr static size_t value = 0;
 #endif
 };
 
