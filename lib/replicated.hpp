@@ -9,6 +9,7 @@
 #define FCPP_REPLICATED_H_
 
 #include "lib/past_ctl.hpp"
+#include "lib/slcs.hpp"
 #include "lib/coordination/time.hpp"
 
 
@@ -19,6 +20,14 @@ namespace fcpp {
 
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
+
+namespace tags {
+    struct critic {};
+    struct ever_critic {};
+    struct now_critic__SLCS {};
+    struct now_critic__replicated {};
+}
+
 
 /**
  * Generic algorithm replicator, returning the value of the oldest
@@ -45,7 +54,21 @@ FUN_EXPORT replicate_t = export_list<spawn_t<size_t, bool>, shared_clock_t>;
 FUN bool somewhere(ARGS, bool f, size_t replicas, real_t diameter, real_t infospeed) { CODE
     return replicate(CALL, replicas, diameter / infospeed / (replicas-1), logic::EP, f);
 }
+//! @brief Export list for somewhere.
 FUN_EXPORT somewhere_t = export_list<replicate_t, past_ctl_t>;
+
+
+//! @brief Case study checking whether a critic event is happening.
+FUN void criticality_control(ARGS) {
+    using namespace tags;
+    bool c = node.uid == 0 and node.current_time() > 10 and node.current_time() < 15;
+    node.storage(critic{}) = c;
+    node.storage(ever_critic{}) = logic::EP(CALL, c);
+    node.storage(now_critic__SLCS{}) = logic::F(CALL, c);
+    node.storage(now_critic__replicated{}) = somewhere(CALL, c, 4, node.storage(diameter{})*node.storage(radius{}), node.storage(radius{})/node.storage(period{}));
+}
+//! @brief Export list for criticality_control.
+FUN_EXPORT criticality_control_t = export_list<somewhere_t>;
 
 }
 
