@@ -17,11 +17,13 @@
 namespace fcpp {
 
 //! @brief Number of people in the area.
-constexpr size_t node_num = 100;
+constexpr size_t node_num = 150;
 //! @brief Dimensionality of the space.
 constexpr size_t dim = 2;
 //! @brief The maximum communication range between nodes.
 constexpr size_t communication_range = 100;
+//! @brief The diagonal size.
+constexpr size_t diag = 1000;
 //! @brief The maximum x coordinate.
 constexpr size_t hi_x = 800;
 //! @brief The maximum y coordinate.
@@ -49,7 +51,7 @@ MAIN() {
     // call to the library function handling random movement
     rectangle_walk(CALL, make_vec(0,0), make_vec(hi_x, hi_y), 0.1*node.storage(comm_rad{}), node.storage(period{}));
     // call to the case study function
-    criticality_control(CALL);
+    criticality_control(CALL, diag, 0.8*node.storage(comm_rad{})/node.storage(period{}));
 
     // display formula values in the user interface
     node.storage(node_size{}) = node.storage(critic{}) ? 20 : 10;
@@ -77,7 +79,7 @@ using round_s = sequence::periodic<
     distribution::weibull_n<times_t, 10, 1, 10> // weibull-distributed time for interval (10/10=1 mean, 1/10=0.1 deviation)
 >;
 //! @brief The sequence of network snapshots (one every simulated second).
-using log_s = sequence::periodic_n<1, 0, 1, 60>;
+using log_s = sequence::periodic_n<1, 0, 1, 70>;
 //! @brief The sequence of node generation events (node_num devices all generated at time 0).
 using spawn_s = sequence::multiple_n<node_num, 0>;
 //! @brief The distribution of initial node positions (random in a rectangle).
@@ -120,7 +122,7 @@ DECLARE_OPTIONS(list,
     aggregator_t,  // the tags and corresponding aggregators to be logged
     init<
         x,          rectangle_d, // initialise position randomly in a rectangle for new nodes
-        diameter,   distribution::constant_n<hops_t, (hi_x + hi_y)/communication_range>,
+        diameter,   distribution::constant_n<hops_t, diag/communication_range*3/2>,
         comm_rad,   distribution::constant_n<real_t, communication_range>,
         period,     distribution::constant_n<times_t, 1>
     >,
