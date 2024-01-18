@@ -174,16 +174,18 @@ using single_plot_t = plot::split<S, plot::join<Ts>...>;
 
 //! @brief Overall row of plots.
 template <typename S, size_t t0 = 0>
-using row_plot_t = plot::join<
-#ifdef ALLPLOTS
-    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<max_proc, aggregator::max<int>>>>,
-    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, plot::value<aggregator::sum<sent_count>>>>,
-    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<repeat_count, aggregator::sum<size_t>>>>,
-#endif
-    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<delivery_count, aggregator::sum<size_t>>>>,
-    single_plot_t<S, lines_t<avg_proc, noaggr>>,
-    plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<avg_delay, noaggr>>>
->;
+using row_plot_t = single_plot_t<S, lines_t<avg_proc, noaggr>>;
+
+// plot::join<
+// #ifdef ALLPLOTS
+//     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<max_proc, aggregator::max<int>>>>,
+//     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, plot::value<aggregator::sum<sent_count>>>>,
+//     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<repeat_count, aggregator::sum<size_t>>>>,
+// #endif
+//     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<delivery_count, aggregator::sum<size_t>>>>,
+//     single_plot_t<S, lines_t<avg_proc, noaggr>>,
+//     plot::filter<plot::time, filter::above<t0>, single_plot_t<S, lines_t<avg_delay, noaggr>>>
+// >;
 
 //! @brief Applies multiple filters (empty overload).
 template <typename P, typename... Ts>

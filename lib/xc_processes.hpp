@@ -167,11 +167,8 @@ FUN_EXPORT spherical_test_t = export_list<spawn_profiler_t, double, monotonic_di
 using set_t = std::unordered_set<device_t>;
 
 //! @brief Makes test for tree processes.
-GEN(T,S) void tree_test(ARGS, common::option<message> const& m, nvalue<device_t> fdparent, nvalue<S> const& fdbelow, size_t set_size, T, int render = -1) { CODE
+GEN(T,S) void tree_test(ARGS, common::option<message> const& m, nvalue<device_t> fdneigh, nvalue<device_t> fdparent, nvalue<S> const& fdbelow, size_t set_size, T, int render = -1) { CODE
     spawn_profiler(CALL, tags::tree<T>{}, [&](message const& m, real_t v){
-        nvalue<bool> source_path  = map_hood([&] (S b) {return (b.count(m.from) > 0);}, fdbelow);
-        nvalue<bool> dest_path = map_hood([&] (device_t d) {return (d == node.uid);}, fdparent) and map_hood([&] (S b) {return (b.count(m.to) > 0);}, fdbelow);
-
         nvalue<bool> fdwav;       
 
         bool dest = m.to == node.uid;
@@ -180,6 +177,9 @@ GEN(T,S) void tree_test(ARGS, common::option<message> const& m, nvalue<device_t>
         if (dest) {
             fdwav = nvalue<bool>(false);
         } else if (rnd == 1) {
+            nvalue<bool> source_path  = map_hood([&] (device_t d) {return (d == self(CALL, fdparent));}, fdneigh);
+            nvalue<bool> dest_path = map_hood([&] (device_t d) {return (d == node.uid);}, fdparent) and map_hood([&] (S b) {return (b.count(m.to) > 0);}, fdbelow);
+
             fdwav = source_path or dest_path;
             fdwav = mod_self(CALL, fdwav, true);
         } else {
@@ -226,11 +226,13 @@ MAIN() {
         return x;
     });
     nvalue<set_t> fdbelow = nbr(CALL, below); 
+    nvalue<device_t> fdparent = nbr(CALL, parent); 
+    nvalue<device_t> fdneigh = nbr_uid(CALL);
 
     common::osstream os;
     os << below;
 
-    tree_test(CALL, m, parent, fdbelow, os.size(), xc{});
+    tree_test(CALL, m, fdneigh, fdparent, fdbelow, os.size(), xc{});
 
     #endif
 
