@@ -8,8 +8,6 @@
 #ifndef FCPP_REPLICATED_H_
 #define FCPP_REPLICATED_H_
 
-#include "lib/past_ctl.hpp"
-#include "lib/slcs.hpp"
 #include "lib/coordination/time.hpp"
 
 
@@ -26,6 +24,8 @@ namespace tags {
     struct ever_critic {};
     struct now_critic_SLCS {};
     struct now_critic_replicated {};
+    struct error_SLCS {};
+    struct error_replicated {};
     struct comm_rad {};
     struct period {};
 }
@@ -64,11 +64,14 @@ FUN_EXPORT somewhere_t = export_list<replicate_t, past_ctl_t>;
 //! @brief Case study checking whether a critic event is happening.
 FUN void criticality_control(ARGS, real_t diameter, real_t infospeed) {
     using namespace tags;
-    bool c = node.uid == 42 and node.current_time() > 20 and node.current_time() < 25;
+    bool oracle = node.current_time() > 20 and node.current_time() < 25;
+    bool c = node.uid == 42 and oracle;
     node.storage(critic{}) = c;
     node.storage(ever_critic{}) = logic::EP(CALL, c);
     node.storage(now_critic_SLCS{}) = logic::F(CALL, c);
     node.storage(now_critic_replicated{}) = somewhere(CALL, c, 4, diameter, infospeed);
+    node.storage(error_SLCS{}) = node.storage(now_critic_SLCS{}) != oracle;
+    node.storage(error_replicated{}) = node.storage(now_critic_replicated{}) != oracle;
 }
 //! @brief Export list for criticality_control.
 FUN_EXPORT criticality_control_t = export_list<somewhere_t, slcs_t>;
