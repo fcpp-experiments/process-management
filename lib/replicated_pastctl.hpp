@@ -107,7 +107,8 @@ using round_s = sequence::periodic<
 //! @brief The sequence of network snapshots (one every simulated second).
 using log_s = sequence::periodic_n<1, 0, 1, end>;
 //! @brief The sequence of node generation events (node_num devices all generated at time 0).
-using spawn_s = sequence::multiple_n<node_num, 0>;
+//spawn_schedule<sequence::multiple<i<devices, size_t>, n<0>>>
+using spawn_s = sequence::multiple<i<devices, size_t>, n<0>>;
 //! @brief The distribution of initial node positions (random in a rectangle).
 using rectangle_d = distribution::rect<n<0>, n<0>, i<side>, i<side>>;
 //! @brief The contents of the node storage as tags and associated types.
