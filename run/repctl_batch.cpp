@@ -11,7 +11,7 @@
 #include "lib/replicated_pastctl.hpp"
 
 //! @brief Number of identical runs to be averaged.
-constexpr int runs = 10;
+constexpr int runs = 1;
 
 
 //! @brief The main function.
@@ -23,7 +23,7 @@ int main() {
     // The component type (batch simulator with given options).
     using comp_t = component::batch_simulator<option::list>;
     // The list of initialisation values to be used for simulations.
-    double infospeed = 0.8 * communication_range;
+    //double infospeed = 0.8 * communication_range;
     auto init_list = batch::make_tagged_tuple_sequence(
             batch::arithmetic<option::seed>(runs + 1, 40*runs, 1, 1, runs), // 40x random seeds for the default setting
             batch::arithmetic<option::tvar>(0,   40,   1,      (int)option::var_def<option::tvar>), // 41 different temporal variances
@@ -42,7 +42,12 @@ int main() {
                 double s = common::get<option::side>(x);
                 return d*s*s/(3.141592653589793*communication_range*communication_range) + 0.5;
             }),
-            batch::constant<option::output, option::infospeed, option::plotter>(nullptr, infospeed, &p) // reference to the plotter object
+            batch::formula<option::infospeed, double>([](auto const& x) {
+                double d = common::get<option::dens>(x);
+                double s = common::get<option::speed>(x);
+                return (0.08*d - 0.7) * s * 0.01 + 0.075*d*d - 1.6*d + 11;
+            }),
+            batch::constant<option::output, option::plotter>(nullptr, &p) // reference to the plotter object
     );
     // Runs the given simulations.
     batch::run(comp_t{}, init_list);

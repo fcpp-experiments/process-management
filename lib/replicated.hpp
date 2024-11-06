@@ -64,7 +64,7 @@ FUN_EXPORT somewhere_t = export_list<replicate_t, past_ctl_t>;
 //! @brief Case study checking whether a critic event is happening.
 FUN void criticality_control(ARGS, real_t diameter, real_t infospeed) {
     using namespace tags;
-    bool oracle = node.current_time() > 20 and node.current_time() < 25;
+    bool oracle = node.current_time() > 20 and node.current_time() < 30;
     bool c = node.uid == 42 and oracle;
     node.storage(critic{}) = c;
     node.storage(ever_critic{}) = logic::EP(CALL, c);
