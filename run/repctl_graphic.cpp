@@ -26,7 +26,8 @@ int main() {
     int speed = option::var_def<option::speed>;
     int side = hops * (2*dens)/(2*dens+1.0) * communication_range / sqrt(2.0) + 0.5;
     int devices = dens*side*side/(3.141592653589793*communication_range*communication_range) + 0.5;
-    double infospeed = 0.8 * communication_range;
+    double infospeed = (0.08*dens - 0.7) * speed * 0.01 + 0.075*dens*dens - 1.6*dens + 11;
+    //0.8 * communication_range;
     auto init_v = common::make_tagged_tuple<option::name, option::tvar, option::dens, option::hops, option::speed, option::side, option::devices, option::infospeed, option::plotter>("Replicated Past-CTL", tvar, dens, hops, speed, side, devices, infospeed, &p);
     std::cout << "/*\n"; // avoid simulation output to interfere with plotting output
     {
