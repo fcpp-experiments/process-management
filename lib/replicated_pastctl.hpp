@@ -158,7 +158,7 @@ struct var_def_t<dens> {
 //! @brief Default hops for simulations.
 template <>
 struct var_def_t<hops> {
-    constexpr static size_t value = 20;
+    constexpr static size_t value = 10;
 };
 
 //! @brief Default speed for simulations.
